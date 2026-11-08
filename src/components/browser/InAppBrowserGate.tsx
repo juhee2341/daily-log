@@ -7,13 +7,19 @@ import { detectInAppBrowser, externalOpenUrl, type InAppBrowser } from "@/lib/in
 const DISMISS_KEY = "daily-log:in-app-dismissed";
 const subscribe = () => () => {};
 
+// useSyncExternalStore의 스냅샷은 호출마다 같은 값을 돌려줘야 한다.
+// 매번 새 객체를 만들면 React가 "값이 계속 바뀐다"고 보고 무한 렌더링에 빠진다 (인앱 브라우저에서만 발생했던 버그).
+let cached: { userAgent: string; browser: InAppBrowser | null } | null = null;
+
 function readBrowser(): InAppBrowser | null {
   try {
     if (sessionStorage.getItem(DISMISS_KEY)) return null;
   } catch {
     // 저장소 접근이 막힌 환경 — 무시
   }
-  return detectInAppBrowser(navigator.userAgent);
+  const userAgent = navigator.userAgent;
+  if (cached?.userAgent !== userAgent) cached = { userAgent, browser: detectInAppBrowser(userAgent) };
+  return cached.browser;
 }
 
 /** ID-5: 인앱 브라우저면 기본 브라우저로 열도록 안내한다. 서버 렌더에서는 아무것도 그리지 않는다. */
