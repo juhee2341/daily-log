@@ -174,6 +174,7 @@ export type Database = {
     Views: { [_ in never]: never };
     Functions: {
       is_active_member: { Args: { p_session_id: string }; Returns: boolean };
+      transfer_identity: { Args: { p_code_hash: string; p_to: string }; Returns: Json };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

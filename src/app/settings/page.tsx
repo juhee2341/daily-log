@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { InstallGuide } from "@/components/settings/InstallGuide";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
+import { TransferIssuer } from "@/components/transfer/TransferIssuer";
 import { getCurrentUserId } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -25,6 +26,13 @@ export default function SettingsPage() {
         <Suspense fallback={<div className="h-24 animate-pulse rounded-xl bg-muted motion-reduce:animate-none" aria-hidden />}>
           <NotificationSection />
         </Suspense>
+      </section>
+
+      <section aria-labelledby="transfer-heading" className="flex flex-col gap-3">
+        <h2 id="transfer-heading" className="text-sm font-semibold text-muted-foreground">
+          기기 옮기기
+        </h2>
+        <TransferIssuer />
       </section>
 
       <section aria-labelledby="install-heading" className="flex flex-col gap-3">

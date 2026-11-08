@@ -33,6 +33,13 @@ export default function Home({ searchParams }: PageProps<"/">) {
           <MySessionList />
         </Suspense>
       </section>
+
+      <p className="text-center text-xs text-muted-foreground">
+        휴대폰을 바꿨나요?{" "}
+        <Link href="/transfer" className="font-medium text-foreground underline underline-offset-4">
+          기기 옮기기
+        </Link>
+      </p>
     </main>
   );
 }
