@@ -164,6 +164,13 @@ function PostThumb({ sessionId, post }: { sessionId: string; post: TimelinePost 
         <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/70 to-transparent px-2 pt-4 pb-1.5 text-xs font-medium text-white">
           {post.nickname}
         </span>
+        {post.commentCount > 0 && (
+          <span className="absolute top-1.5 left-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
+            <span aria-hidden>💬 </span>
+            <span className="sr-only">댓글 </span>
+            {post.commentCount}
+          </span>
+        )}
         {post.mediaType === "video" && (
           <span className="absolute top-1.5 right-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white" aria-hidden>
             ▶

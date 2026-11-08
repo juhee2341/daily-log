@@ -15,6 +15,7 @@ export type TimelinePost = {
   thumbUrl: string | null;
   caption: string | null;
   createdAt: string;
+  commentCount: number;
 };
 
 export type Timeline = {
@@ -58,6 +59,20 @@ export async function getTimeline(
     : { data: [], error: null };
   const thumbUrls = new Map((signed.data ?? []).map((s) => [s.path, s.signedUrl]));
 
+  const comments = posts.data.length
+    ? await admin
+        .from("comments")
+        .select("post_id")
+        .in(
+          "post_id",
+          posts.data.map((p) => p.id),
+        )
+        .is("deleted_at", null)
+    : { data: [], error: null };
+  if (comments.error) throw comments.error;
+  const commentCounts = new Map<string, number>();
+  for (const c of comments.data) commentCounts.set(c.post_id, (commentCounts.get(c.post_id) ?? 0) + 1);
+
   const slots = new Map<string, TimelinePost[]>();
   const currentSlot = getSlotStart(now).toISOString();
   if (day === "today") slots.set(currentSlot, []);
@@ -73,6 +88,7 @@ export async function getTimeline(
       thumbUrl: thumbUrls.get(p.thumb_path) ?? null,
       caption: p.caption,
       createdAt: p.created_at,
+      commentCount: commentCounts.get(p.id) ?? 0,
     });
     slots.set(key, list);
   }
@@ -144,4 +160,38 @@ export async function getPostDetail(sessionId: string, postId: string, myMemberI
     durationMs: post.duration_ms,
     cancelUntil: isMine && cancelDeadline > now ? cancelDeadline.toISOString() : null,
   } satisfies PostDetail;
+}
+
+export type PostComment = {
+  id: string;
+  nickname: string;
+  isMine: boolean;
+  body: string | null;
+  deleted: boolean;
+  createdAt: string;
+};
+
+/** 포스트 댓글 (오래된 순). 호출 전에 requireMember로 권한을 확인한다. */
+export async function getComments(sessionId: string, postId: string, myMemberId: string): Promise<PostComment[]> {
+  const admin = createAdminClient();
+  const [comments, members] = await Promise.all([
+    admin
+      .from("comments")
+      .select("id, member_id, body, deleted_at, created_at")
+      .eq("post_id", postId)
+      .order("created_at", { ascending: true }),
+    admin.from("members").select("id, nickname").eq("session_id", sessionId),
+  ]);
+  if (comments.error) throw comments.error;
+  if (members.error) throw members.error;
+  const nicknames = new Map(members.data.map((m) => [m.id, m.nickname]));
+
+  return comments.data.map((c) => ({
+    id: c.id,
+    nickname: nicknames.get(c.member_id) ?? "알 수 없음",
+    isMine: c.member_id === myMemberId,
+    body: c.deleted_at ? null : c.body,
+    deleted: c.deleted_at !== null,
+    createdAt: c.created_at,
+  }));
 }

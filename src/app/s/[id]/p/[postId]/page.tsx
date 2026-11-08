@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { CommentForm } from "@/components/comment/CommentForm";
+import { CommentList } from "@/components/comment/CommentList";
 import { CancelPostButton } from "@/components/post/CancelPostButton";
 import { SessionSignalRefresher } from "@/components/session/SessionSignalRefresher";
 import { Button } from "@/components/ui/button";
 import { AuthError, requireMember } from "@/lib/auth";
-import { getPostDetail } from "@/lib/data/timeline";
+import { getComments, getPostDetail } from "@/lib/data/timeline";
 import { formatKst } from "@/lib/slot";
 import { postRefSchema } from "@/lib/validators/post.schema";
 
@@ -33,7 +35,7 @@ async function PostContent({ params }: { params: PageProps<"/s/[id]/p/[postId]">
     if (error instanceof AuthError) notFound();
     throw error;
   }
-  const post = await getPostDetail(id, postId, memberId);
+  const [post, comments] = await Promise.all([getPostDetail(id, postId, memberId), getComments(id, postId, memberId)]);
   if (!post) notFound();
 
   return (
@@ -77,7 +79,13 @@ async function PostContent({ params }: { params: PageProps<"/s/[id]/p/[postId]">
         </div>
       )}
 
-      <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">댓글은 다음 단계에서 붙어요.</p>
+      <section aria-labelledby="comments-heading" className="flex flex-col gap-4 border-t pt-4">
+        <h2 id="comments-heading" className="text-sm font-semibold">
+          댓글 {comments.filter((c) => !c.deleted).length}
+        </h2>
+        <CommentList sessionId={id} comments={comments} />
+        <CommentForm sessionId={id} postId={post.id} />
+      </section>
     </>
   );
 }
