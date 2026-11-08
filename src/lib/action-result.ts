@@ -15,3 +15,12 @@ export function fail(
 ): { success: false; error: string; code: ActionErrorCode; fieldErrors?: Record<string, string[] | undefined> } {
   return { success: false, error, code, fieldErrors };
 }
+
+/** requireUser/requireMember/requireHost 의 AuthError를 실패 결과로 바꾼다. 그 밖의 에러는 다시 던진다. */
+export function authFailure(error: unknown) {
+  if (error instanceof Error && error.name === "AuthError") {
+    const { code, message } = error as Error & { code: "UNAUTHORIZED" | "NOT_FOUND" };
+    return fail(code, message);
+  }
+  throw error;
+}

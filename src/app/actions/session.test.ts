@@ -3,7 +3,6 @@ import { AuthError, requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 
-jest.mock("server-only", () => ({}));
 jest.mock("next/navigation", () => ({ redirect: jest.fn() }));
 jest.mock("@/lib/auth", () => {
   const actual = jest.requireActual("@/lib/auth");

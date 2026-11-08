@@ -11,7 +11,8 @@
     "test:coverage": "jest --coverage",
     "typecheck": "tsc --noEmit",
     "setup:supabase": "bash scripts/setup-supabase.sh",
-    "db:types": "supabase gen types typescript --linked > src/types/database.ts"
+    "db:types": "supabase gen types typescript --linked > src/types/database.ts",
+    "db:push": "bash -c 'set -a && . ./.env.local && set +a && supabase db push --remote --password \"$SUPABASE_DB_PASSWORD\"'"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

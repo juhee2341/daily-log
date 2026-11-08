@@ -32,6 +32,8 @@ export type Database = {
           created_at: string;
           expires_at: string;
           used_at: string | null;
+          used_by: string | null;
+          rejected_at: string | null;
         },
         {
           id?: string;
@@ -42,6 +44,8 @@ export type Database = {
           created_at?: string;
           expires_at?: string;
           used_at?: string | null;
+          used_by?: string | null;
+          rejected_at?: string | null;
         }
       >;
       members: Table<

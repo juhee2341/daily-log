@@ -38,3 +38,8 @@ export function isQuietHour(hour: number, start: number, end: number): boolean {
   if (start === end) return false;
   return start < end ? hour >= start && hour < end : hour >= start || hour < end;
 }
+
+/** KST 기준 표시용 포맷 (예: `HH:mm`, `M월 d일`). */
+export function formatKst(date: Date | string, pattern: string): string {
+  return format(toKst(typeof date === "string" ? new Date(date) : date), pattern);
+}

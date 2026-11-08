@@ -9,6 +9,7 @@ const config: Config = {
     ],
   },
   moduleNameMapper: {
+    "^server-only$": "<rootDir>/src/test-utils/empty.ts",
     "^@/(.*)$": "<rootDir>/src/$1",
   },
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
