@@ -7,9 +7,14 @@ import { Button } from "@/components/ui/button";
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-8">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight">daily-log</h1>
-        <p className="text-sm text-muted-foreground">매시간 함께 찍는 오늘과 어제의 기록</p>
+      <header className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-bold tracking-tight">daily-log</h1>
+          <p className="text-sm text-muted-foreground">매시간 함께 찍는 오늘과 어제의 기록</p>
+        </div>
+        <Link href="/settings" className="rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
+          알림·설정
+        </Link>
       </header>
 
       <Suspense>
