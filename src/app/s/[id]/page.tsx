@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { AuthError, requireMember } from "@/lib/auth";
 import { getMission } from "@/lib/data/day-map";
 import { getSessionOverview } from "@/lib/data/sessions";
+import { HOST_INACTIVE_DAYS } from "@/lib/maintenance";
 import { getTimeline, type Timeline, type TimelinePost } from "@/lib/data/timeline";
 import { formatKst } from "@/lib/slot";
 import { dayParamSchema } from "@/lib/validators/post.schema";
@@ -77,9 +78,23 @@ async function SessionContent({
           { href: `/s/${id}/map${day === "yesterday" ? "?day=yesterday" : ""}`, label: "하루 지도" },
         ]}
       />
+      <HostAwayBanner days={overview.hostAwayDays} />
       <MissionCard sessionId={id} mission={mission} canEdit={overview.me.role === "host" && day === "today"} />
       <TimelineView sessionId={id} timeline={timeline} />
     </>
+  );
+}
+
+const WARN_AFTER_DAYS = 10;
+
+/** S-6: 방장이 10일 넘게 들어오지 않으면 멤버에게 미리 알린다 (14일이면 자동 폭파). */
+function HostAwayBanner({ days }: { days: number }) {
+  if (days < WARN_AFTER_DAYS) return null;
+  const left = Math.max(0, HOST_INACTIVE_DAYS - days);
+  return (
+    <p role="status" className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
+      방장이 {days}일째 들어오지 않았어요. {left > 0 ? `${left}일 뒤` : "곧"} 세션이 자동으로 사라져요.
+    </p>
   );
 }
 

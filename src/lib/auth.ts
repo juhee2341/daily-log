@@ -38,7 +38,17 @@ export async function requireUser(): Promise<string> {
   return signIn.user.id;
 }
 
-/** 해당 세션의 active 멤버인지 확인한다. */
+/** 방장 접속 시각 갱신 (S-6). 최대 1시간에 한 번만 실제로 쓴다. */
+async function touchHostLastSeen(sessionId: string) {
+  const threshold = new Date(Date.now() - HOST_SEEN_THROTTLE_MS).toISOString();
+  await createAdminClient()
+    .from("sessions")
+    .update({ host_last_seen: new Date().toISOString() })
+    .eq("id", sessionId)
+    .lt("host_last_seen", threshold);
+}
+
+/** 해당 세션의 active 멤버인지 확인한다. 방장이면 세션 화면을 보기만 해도 접속으로 기록한다. */
 export async function requireMember(sessionId: string): Promise<{ userId: string; member: Tables<"members"> }> {
   const userId = await getCurrentUserId();
   if (!userId) throw new AuthError("UNAUTHORIZED", "세션에 참여한 기기가 아니에요.");
@@ -52,20 +62,13 @@ export async function requireMember(sessionId: string): Promise<{ userId: string
     .maybeSingle();
 
   if (!member) throw new AuthError("NOT_FOUND", "세션을 찾을 수 없거나 참여 중이 아니에요.");
+  if (member.role === "host") await touchHostLastSeen(sessionId);
   return { userId, member };
 }
 
-/** 방장인지 확인하고, 방장 접속 시각을 갱신한다 (S-6, 최대 1시간에 한 번). */
+/** 방장인지 확인한다 (접속 시각 갱신은 requireMember에서). */
 export async function requireHost(sessionId: string): Promise<{ userId: string; member: Tables<"members"> }> {
   const result = await requireMember(sessionId);
   if (result.member.role !== "host") throw new AuthError("UNAUTHORIZED", "방장만 할 수 있어요.");
-
-  const threshold = new Date(Date.now() - HOST_SEEN_THROTTLE_MS).toISOString();
-  await createAdminClient()
-    .from("sessions")
-    .update({ host_last_seen: new Date().toISOString() })
-    .eq("id", sessionId)
-    .lt("host_last_seen", threshold);
-
   return result;
 }

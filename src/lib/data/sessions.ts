@@ -63,15 +63,17 @@ export async function getMySessions(userId: string, now = new Date()): Promise<M
 export type SessionOverview = {
   id: string;
   name: string;
+  /** 방장이 마지막으로 들어온 뒤 지난 일수 (S-6 경고용) */
+  hostAwayDays: number;
   me: { id: string; nickname: string; role: MemberRole };
   members: { id: string; nickname: string; role: MemberRole }[];
 };
 
 /** 세션 화면 상단 정보. 호출 전에 requireMember로 권한을 확인한다. */
-export async function getSessionOverview(sessionId: string, myMemberId: string): Promise<SessionOverview | null> {
+export async function getSessionOverview(sessionId: string, myMemberId: string, now = new Date()): Promise<SessionOverview | null> {
   const admin = createAdminClient();
   const [session, members] = await Promise.all([
-    admin.from("sessions").select("id, name").eq("id", sessionId).maybeSingle(),
+    admin.from("sessions").select("id, name, host_last_seen").eq("id", sessionId).maybeSingle(),
     admin
       .from("members")
       .select("id, nickname, role")
@@ -85,5 +87,6 @@ export async function getSessionOverview(sessionId: string, myMemberId: string):
 
   const me = members.data.find((m) => m.id === myMemberId);
   if (!me) return null;
-  return { id: session.data.id, name: session.data.name, me, members: members.data };
+  const hostAwayDays = Math.floor((now.getTime() - new Date(session.data.host_last_seen).getTime()) / (24 * 60 * 60 * 1000));
+  return { id: session.data.id, name: session.data.name, hostAwayDays, me, members: members.data };
 }
