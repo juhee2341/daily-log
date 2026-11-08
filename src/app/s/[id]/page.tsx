@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { MissionCard } from "@/components/mission/MissionCard";
 import { SessionSignalRefresher } from "@/components/session/SessionSignalRefresher";
+import { DayTabs } from "@/components/timeline/DayTabs";
 import { Countdown } from "@/components/timeline/Countdown";
 import { Button } from "@/components/ui/button";
 import { AuthError, requireMember } from "@/lib/auth";
+import { getMission } from "@/lib/data/day-map";
 import { getSessionOverview } from "@/lib/data/sessions";
 import { getTimeline, type Timeline, type TimelinePost } from "@/lib/data/timeline";
 import { formatKst } from "@/lib/slot";
-import { cn } from "@/lib/utils";
 import { dayParamSchema } from "@/lib/validators/post.schema";
 import { sessionIdSchema } from "@/lib/validators/session.schema";
 
@@ -48,6 +50,7 @@ async function SessionContent({
 
   const [overview, timeline] = await Promise.all([getSessionOverview(id, memberId), getTimeline(id, memberId, day)]);
   if (!overview) notFound();
+  const mission = await getMission(id, timeline.logDate);
 
   return (
     <>
@@ -65,34 +68,15 @@ async function SessionContent({
         </Button>
       </header>
 
-      <DayTabs sessionId={id} day={day} logDate={timeline.logDate} />
+      <DayTabs
+        basePath={`/s/${id}`}
+        day={day}
+        logDate={timeline.logDate}
+        aside={{ href: `/s/${id}/map${day === "yesterday" ? "?day=yesterday" : ""}`, label: "하루 지도" }}
+      />
+      <MissionCard sessionId={id} mission={mission} canEdit={overview.me.role === "host" && day === "today"} />
       <TimelineView sessionId={id} timeline={timeline} />
     </>
-  );
-}
-
-function DayTabs({ sessionId, day, logDate }: { sessionId: string; day: Timeline["day"]; logDate: string }) {
-  const tabs = [
-    { key: "today", label: "오늘", href: `/s/${sessionId}` },
-    { key: "yesterday", label: "어제", href: `/s/${sessionId}?day=yesterday` },
-  ] as const;
-  return (
-    <nav aria-label="날짜" className="flex items-center gap-2">
-      {tabs.map((tab) => (
-        <Link
-          key={tab.key}
-          href={tab.href}
-          aria-current={day === tab.key ? "page" : undefined}
-          className={cn(
-            "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-            day === tab.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {tab.label}
-        </Link>
-      ))}
-      <span className="ml-auto text-xs text-muted-foreground">{formatKst(`${logDate}T12:00:00+09:00`, "M월 d일")}</span>
-    </nav>
   );
 }
 

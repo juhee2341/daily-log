@@ -12,6 +12,7 @@ export type SessionSignal =
   | { type: "member.left"; memberId: string }
   | { type: "member.kicked"; memberId: string }
   | { type: "invite.changed" }
+  | { type: "mission.updated" }
   | { type: "session.destroyed" };
 
 export type JoinSignal = { type: "member.approved" } | { type: "member.rejected" };
