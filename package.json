@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "setup:supabase": "bash scripts/setup-supabase.sh"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
