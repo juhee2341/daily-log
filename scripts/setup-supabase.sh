@@ -32,7 +32,7 @@ ORG_COUNT="$(printf '%s' "$ORGS_JSON" | json_get 'String(L.length)')" || {
 }
 if [[ "$ORG_COUNT" == "0" ]]; then
   echo "▶ 조직이 없어서 새로 만들어요: $PROJECT_NAME (Free)"
-  ORG_JSON="$(sb orgs create "$PROJECT_NAME" -o json)"
+  ORG_JSON="$(sb orgs create "$PROJECT_NAME" --yes -o json)"
   ORG_ID="$(printf '%s' "$ORG_JSON" | json_get 'd.id ?? d.slug')"
 elif [[ "$ORG_COUNT" == "1" ]]; then
   ORG_ID="$(printf '%s' "$ORGS_JSON" | json_get 'L[0].id ?? L[0].slug')"
@@ -47,7 +47,7 @@ echo "  조직: $ORG_ID"
 DB_PASSWORD="$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 32)"
 
 echo "▶ 프로젝트 생성: $PROJECT_NAME ($REGION, Free)"
-CREATE_JSON="$(sb projects create "$PROJECT_NAME" --org-id "$ORG_ID" --db-password "$DB_PASSWORD" --region "$REGION" -o json)"
+CREATE_JSON="$(sb projects create "$PROJECT_NAME" --org-id "$ORG_ID" --db-password "$DB_PASSWORD" --region "$REGION" --yes -o json)"
 REF="$(printf '%s' "$CREATE_JSON" | json_get 'd.ref ?? d.id')"
 echo "  ref: $REF"
 
