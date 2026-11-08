@@ -3,6 +3,8 @@
 export const SIGNAL_EVENT = "signal";
 
 export type SessionSignal =
+  | { type: "post.created" }
+  | { type: "post.deleted" }
   | { type: "member.pending" }
   | { type: "member.joined" }
   | { type: "member.left"; memberId: string }

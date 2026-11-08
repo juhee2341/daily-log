@@ -1,7 +1,8 @@
 import "server-only";
+import { MEDIA_BUCKET } from "@/lib/storage-bucket";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export const MEDIA_BUCKET = "media";
+export { MEDIA_BUCKET };
 const PAGE = 1000;
 
 /** prefix 아래의 모든 객체 경로를 모은다 (폴더는 재귀). */

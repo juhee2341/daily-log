@@ -9,7 +9,9 @@ export type FakeCall = {
 };
 export type FakeResult = { data?: unknown; error?: unknown; count?: number | null };
 
-export function fakeSupabase(handler: (call: FakeCall) => FakeResult | undefined) {
+export type FakeStorage = Record<string, (...args: never[]) => unknown>;
+
+export function fakeSupabase(handler: (call: FakeCall) => FakeResult | undefined, storage: FakeStorage = {}) {
   const calls: FakeCall[] = [];
 
   const from = (table: string) => {
@@ -38,5 +40,5 @@ export function fakeSupabase(handler: (call: FakeCall) => FakeResult | undefined
     return builder;
   };
 
-  return { client: { from }, calls };
+  return { client: { from, storage: { from: () => storage } }, calls };
 }
