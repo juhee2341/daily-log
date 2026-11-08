@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 type Mode = "photo" | "video";
 type Facing = "user" | "environment";
-type Camera = { status: "loading" } | { status: "ready" } | { status: "error"; message: string };
+type Camera = { status: "loading" } | { status: "ready"; silent: boolean } | { status: "error"; message: string };
 type Shot = { mime: MediaMime; blob: Blob; thumb: Blob; url: string; durationMs?: number };
 
 const PHOTO_MAX_SIDE = 1440;
@@ -69,18 +69,28 @@ export function CaptureCamera({ sessionId }: { sessionId: string }) {
       return;
     }
     let cancelled = false;
-    navigator.mediaDevices
-      .getUserMedia({
-        video: { facingMode: facing, width: { ideal: 1080 }, height: { ideal: 1440 } },
-        audio: mode === "video",
-      })
-      .then(async (stream) => {
+    const video = { facingMode: facing, width: { ideal: 1080 }, height: { ideal: 1440 } };
+
+    // 영상 모드는 마이크도 요청하되, 마이크만 거부·없음이면 소리 없이라도 찍을 수 있게 한다
+    const open = async (): Promise<{ stream: MediaStream; silent: boolean }> => {
+      if (mode !== "video") return { stream: await navigator.mediaDevices.getUserMedia({ video }), silent: false };
+      try {
+        return { stream: await navigator.mediaDevices.getUserMedia({ video, audio: true }), silent: false };
+      } catch (e) {
+        const name = e instanceof DOMException ? e.name : "";
+        if (name !== "NotAllowedError" && name !== "NotFoundError") throw e;
+        return { stream: await navigator.mediaDevices.getUserMedia({ video }), silent: true };
+      }
+    };
+
+    open()
+      .then(async ({ stream, silent }) => {
         if (cancelled) return stream.getTracks().forEach((t) => t.stop());
         streamRef.current = stream;
-        const video = videoRef.current!;
-        video.srcObject = stream;
-        await video.play().catch(() => {});
-        setCamera({ status: "ready" });
+        const el = videoRef.current!;
+        el.srcObject = stream;
+        await el.play().catch(() => {});
+        setCamera({ status: "ready", silent });
       })
       .catch((e: unknown) => !cancelled && setCamera({ status: "error", message: cameraErrorMessage(e) }));
 
@@ -132,9 +142,13 @@ export function CaptureCamera({ sessionId }: { sessionId: string }) {
   async function startRecording() {
     const video = videoRef.current;
     const stream = streamRef.current;
+    if (!video || !stream || camera.status !== "ready") {
+      setError("카메라를 준비하는 중이에요. 잠시 후 다시 눌러주세요.");
+      return;
+    }
     const recorderMime = pickRecorderMime();
     const mime = recorderMime && baseMime(recorderMime);
-    if (!video || !stream || !recorderMime || !mime) {
+    if (!recorderMime || !mime) {
       setError("이 브라우저는 영상 촬영을 지원하지 않아요. 사진으로 올려주세요.");
       return;
     }
@@ -346,7 +360,11 @@ export function CaptureCamera({ sessionId }: { sessionId: string }) {
               </div>
             </div>
             <p className="text-center text-xs text-white/60">
-              {mode === "photo" ? "지금 이 순간을 찍어주세요" : "2초 이상, 10초가 되면 자동으로 멈춰요"}
+              {mode === "photo"
+                ? "지금 이 순간을 찍어주세요"
+                : camera.status === "ready" && camera.silent
+                  ? "마이크 권한이 없어 소리 없이 녹화돼요"
+                  : "2초 이상, 10초가 되면 자동으로 멈춰요"}
             </p>
           </>
         )}

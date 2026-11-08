@@ -72,7 +72,10 @@ async function SessionContent({
         basePath={`/s/${id}`}
         day={day}
         logDate={timeline.logDate}
-        aside={{ href: `/s/${id}/map${day === "yesterday" ? "?day=yesterday" : ""}`, label: "하루 지도" }}
+        links={[
+          { href: `/s/${id}/vlog${day === "yesterday" ? "?day=yesterday" : ""}`, label: "▶ 브이로그" },
+          { href: `/s/${id}/map${day === "yesterday" ? "?day=yesterday" : ""}`, label: "하루 지도" },
+        ]}
       />
       <MissionCard sessionId={id} mission={mission} canEdit={overview.me.role === "host" && day === "today"} />
       <TimelineView sessionId={id} timeline={timeline} />

@@ -6,11 +6,11 @@ type Props = {
   basePath: string;
   day: "today" | "yesterday";
   logDate: string;
-  /** 오른쪽에 붙는 다른 화면 링크 (예: 지도 ↔ 타임라인) */
-  aside?: { href: string; label: string };
+  /** 오른쪽에 붙는 다른 화면 링크 (예: 하루 지도, 브이로그) */
+  links?: { href: string; label: string }[];
 };
 
-export function DayTabs({ basePath, day, logDate, aside }: Props) {
+export function DayTabs({ basePath, day, logDate, links = [] }: Props) {
   const tabs = [
     { key: "today", label: "오늘", href: basePath },
     { key: "yesterday", label: "어제", href: `${basePath}?day=yesterday` },
@@ -31,11 +31,11 @@ export function DayTabs({ basePath, day, logDate, aside }: Props) {
         </Link>
       ))}
       <span className="ml-auto text-xs text-muted-foreground">{formatKst(`${logDate}T12:00:00+09:00`, "M월 d일")}</span>
-      {aside && (
-        <Link href={aside.href} className="rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
-          {aside.label}
+      {links.map((link) => (
+        <Link key={link.href} href={link.href} className="rounded-full border px-3 py-1.5 text-xs font-medium whitespace-nowrap hover:bg-muted">
+          {link.label}
         </Link>
-      )}
+      ))}
     </nav>
   );
 }
