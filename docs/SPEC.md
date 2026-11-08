@@ -112,7 +112,7 @@
 | 익명 신원 | Supabase 익명 로그인 (`@supabase/ssr`, 쿠키) |
 | DB | Supabase Postgres (+ RLS) |
 | 미디어 | Supabase Storage (서명된 업로드 URL로 직접 업로드) |
-| 실시간 | Supabase Realtime Broadcast, 비공개 채널 `session:{id}`, `join:{memberId}` |
+| 실시간 | Supabase Realtime Broadcast, 공개 채널 `session:{id}`, `join:{memberId}` — **변경 신호만** 전송, 내용은 RLS 쿼리로 재조회 |
 | 정기 작업 | Supabase pg_cron + pg_net → Next.js `/api/cron/*` 호출 (매시 정각: 푸시 / 매일 00:05 KST: 정리) |
 | 푸시 | Web Push (VAPID, `web-push`) + 서비스 워커 |
 | UI | Tailwind CSS v4 |
@@ -122,7 +122,7 @@
 ## 구현 원칙
 
 - **데이터 변경은 전부 Next.js 서버(Server Actions / Route Handlers)를 거친다.** 클라이언트는 읽기와 실시간 구독만 한다.
-- 서버는 변경 후 Realtime Broadcast로 이벤트를 발행한다.
+- 서버는 변경 후 Realtime Broadcast로 **내용 없는 변경 신호**(`{ type }`, 필요 시 대상 id)를 발행한다. 클라이언트는 신호를 받으면 RLS로 보호된 쿼리로 다시 읽는다. 채널 이름을 알아도 멤버가 아니면 내용을 볼 수 없다.
   - `session:{id}` 이벤트: `post.created`, `post.deleted`, `comment.created`, `comment.deleted`, `member.pending`, `member.joined`, `member.left`, `mission.updated`, `session.destroyed`
   - `join:{memberId}` 이벤트: `member.approved`, `member.rejected`
 - 영상 길이(2~10초)는 클라이언트가 강제하고, 서버는 `duration_ms` 범위와 파일 용량 상한(영상 20MB, 사진 5MB)을 검사한다.

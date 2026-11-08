@@ -76,11 +76,12 @@ for i in $(seq 1 30); do
 done
 echo "  연결됨: $REF"
 
-echo "▶ 서비스 준비 대기 (Realtime·Storage 스키마, 보통 1~5분)"
-READY_SQL="select (to_regclass('realtime.messages') is not null and to_regclass('storage.buckets') is not null)::text as ready"
+echo "▶ 서비스 준비 대기 (Storage 스키마)"
+READY_SQL="select (to_regclass('storage.buckets') is not null)::text as ready"
 for i in $(seq 1 60); do
-  if sb db query --remote --read-only "$READY_SQL" 2>/dev/null | grep -q true; then break; fi
-  [[ $i == 60 ]] && { echo "❌ 10분 안에 준비되지 않았어요. 잠시 뒤 다시 실행하세요."; exit 1; }
+  READY_OUT="$(sb db query --remote --read-only "$READY_SQL" 2>&1 || true)"
+  if grep -q true <<<"$READY_OUT"; then break; fi
+  [[ $i == 60 ]] && { echo "❌ 10분 안에 준비되지 않았어요. 마지막 응답:"; echo "$READY_OUT"; exit 1; }
   printf '  대기 중... (%ss)\r' "$((i*10))"; sleep 10
 done
 echo "  준비 완료          "

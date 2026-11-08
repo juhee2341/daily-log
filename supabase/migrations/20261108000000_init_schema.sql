@@ -202,31 +202,12 @@ create policy "members read comments" on public.comments
 -- invites, capture_tickets, transfer_codes, push_subscriptions: 클라이언트 접근 없음
 
 -- ─────────────────────────────────────────────
--- Realtime: 비공개 Broadcast 채널 구독 권한
---   session:{sessionId}  → 해당 세션의 active 멤버
---   join:{memberId}      → 승인 대기 중인 본인
--- 발행은 서버(service role)만 한다.
+-- Realtime: 공개 Broadcast 채널에 "변경 신호"만 보낸다 (내용 없음)
+--   session:{sessionId}  예: { type: "post.created" }
+--   join:{memberId}      예: { type: "member.approved" }
+-- 클라이언트는 신호를 받으면 RLS로 보호된 쿼리로 다시 읽는다.
+-- realtime.messages 는 새 프로젝트에 바로 생기지 않으므로 여기서 의존하지 않는다.
 -- ─────────────────────────────────────────────
-
-create policy "members receive session broadcasts" on realtime.messages
-  for select to authenticated
-  using (
-    realtime.messages.extension = 'broadcast'
-    and (
-      (
-        split_part(realtime.topic(), ':', 1) = 'session'
-        and public.is_active_member(public.try_uuid(split_part(realtime.topic(), ':', 2)))
-      )
-      or (
-        split_part(realtime.topic(), ':', 1) = 'join'
-        and exists (
-          select 1 from public.members m
-          where m.id = public.try_uuid(split_part(realtime.topic(), ':', 2))
-            and m.user_id = auth.uid()
-        )
-      )
-    )
-  );
 
 -- ─────────────────────────────────────────────
 -- Storage: media/{sessionId}/{memberId}/{postId}.{ext}

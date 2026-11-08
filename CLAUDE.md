@@ -63,7 +63,7 @@ supabase/migrations/  스키마·RLS·cron
 - `requireMember(sessionId)` — 해당 세션의 `active` 멤버인지 확인
 - `requireHost(sessionId)` — 방장인지 확인 + `host_last_seen` 갱신(1시간 스로틀)
 - **데이터 변경은 전부 Server Action / Route Handler에서** service role 클라이언트로 수행. 클라이언트는 읽기(RLS)와 Realtime 구독만
-- 변경 후 Realtime Broadcast 이벤트 발행 (이벤트 목록은 `docs/SPEC.md`)
+- 변경 후 Realtime Broadcast로 **변경 신호만** 발행 (내용·개인정보 금지). 클라이언트는 신호를 받으면 RLS 쿼리로 재조회. 이벤트 목록은 `docs/SPEC.md`
 
 ## 렌더링 전략
 
