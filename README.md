@@ -114,7 +114,7 @@ flowchart LR
     PX[proxy.ts<br/>세션 토큰 갱신]
     RSC[Server Components<br/>읽기]
     SA[Server Actions<br/>모든 쓰기·권한 확인]
-    RH[Route Handlers<br/>/api/cron/* · 11단계]
+    RH[Route Handlers<br/>/api/cron/*]
   end
   subgraph Supabase
     AUTH[익명 Auth]
@@ -171,7 +171,8 @@ sequenceDiagram
 | 지난 슬롯에 올리기 | 서버 시각 기반 촬영 티켓, 5분 만료, 슬롯당 1개 유니크 제약 |
 | 남용 | 세션 생성 시간당 5개, 재촬영 슬롯당 10회, 댓글 분당 20개, 미사용 링크 30개 |
 | 비밀값 노출 | 서버 전용 키는 `NEXT_PUBLIC_` 없음, Vercel에는 Sensitive로 저장, `.env*`는 git·Vercel 업로드에서 제외 |
-| 실수로 폭파 | 방장은 세션 이름을 정확히 입력해야 폭파 |
+| 실수로 폭파 | 방장은 세션 이름을 정확히 입력해야 폭파. 방장 미접속 자동 폭파 전 10일째부터 경고 배너 |
+| 정기 작업 엔드포인트 호출 | `CRON_SECRET` Bearer 인증, 비밀값은 Vault에만 |
 | 기기 옮기기 코드 탈취·추측 | 31자×8자리(≈8.5×10¹¹), 10분 만료, 1회용, 해시 저장, 새 코드 생성 시 이전 코드 무효화. 이전 처리는 클라이언트가 직접 부를 수 없는 DB 함수에서 한 트랜잭션으로 |
 
 ## 데이터 모델
@@ -232,6 +233,7 @@ pnpm dev            # http://localhost:3000
 | `pnpm test` / `pnpm test:coverage` | Jest |
 | `pnpm lint` / `pnpm typecheck` | ESLint · TypeScript 검사 |
 | `pnpm setup:supabase` | Supabase 프로젝트 최초 구성 |
+| `pnpm setup:cron [앱 주소]` | pg_cron이 부를 앱 주소·CRON_SECRET을 Vault에 등록하고 한 번 호출해 확인 |
 | `pnpm db:push` | 새 마이그레이션을 원격 DB에 적용 (로그인된 터미널) |
 | `pnpm db:types` | DB 타입(`src/types/database.ts`) 재생성 (로그인된 터미널) |
 
@@ -267,6 +269,19 @@ pnpm test
 - **컴포넌트**: 카카오톡 UA에서 인앱 안내가 크래시 없이 뜨는지(실제 장애 재현 테스트)
 - 외부 HTTP는 msw로 막는다(`onUnhandledRequest: "error"`)
 
+## 정기 작업
+
+Supabase `pg_cron`이 `pg_net`으로 앱의 Route Handler를 호출한다 (Vercel Hobby의 Cron은 하루 1회 제한이라 쓰지 않는다).
+
+| 언제 | 엔드포인트 | 하는 일 |
+|---|---|---|
+| 매시 정각 | `POST /api/cron/hourly` | 아직 안 올린 세션이 있는 기기에 "지금 찍을 시간" 푸시 (방해금지 시간 제외) |
+| 매일 00:05 KST | `POST /api/cron/daily` | 어제보다 오래된 포스트·미션·파일 삭제, 방장 14일 미접속 세션 폭파, 만료된 티켓·옮기기 코드·오래된 초대 링크 삭제, 고아 파일 정리 |
+
+- 인증: `Authorization: Bearer ${CRON_SECRET}` (상수 시간 비교). 값은 Supabase Vault(`app_url`, `cron_secret`)에 있다 — `pnpm setup:cron`으로 등록.
+- 수동 실행: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://<앱>/api/cron/daily`
+- 호출 기록: `select * from net._http_response order by created desc;`
+
 ## 배포
 
 - GitHub `main`에 push → Vercel **프로덕션** 자동 배포
@@ -296,12 +311,15 @@ src/
     in-app-browser.ts       인앱 브라우저 감지
     push.ts / push-reminders.ts  웹 푸시 발송 · 매시 알림 대상 계산
     pwa.ts                  서비스 워커 등록 · 푸시 지원 판별
+    maintenance.ts          매일 정리 작업
+    cron-auth.ts            정기 작업 요청 인증
   proxy.ts                  요청마다 Supabase 세션 갱신
 public/sw.js                서비스 워커 (푸시 수신 · 알림 클릭)
 supabase/
   migrations/               스키마 · RLS · Storage · cron
   config.toml               Auth 등 프로젝트 설정 (익명 로그인 ON)
 scripts/setup-supabase.sh   최초 구성 스크립트
+scripts/setup-cron.sh       정기 작업 Vault 등록 스크립트
 docs/SPEC.md                요구사항 명세
 ```
 
@@ -317,11 +335,10 @@ docs/SPEC.md                요구사항 명세
 - [x] 8. 브이로그 재생 + 내보내기
 - [x] 9. 웹 푸시 + PWA
 - [x] 10. 기기 옮기기
-- [ ] 11. Cron (보관 기간 정리 · 방장 14일 미접속 폭파 · 슬롯 알림)
+- [x] 11. Cron (보관 기간 정리 · 방장 14일 미접속 폭파 · 슬롯 알림)
 
 ## 알려진 제약
 
-- **보관 기간 정리(D-1), 방장 미접속 자동 폭파(S-6), 매시 정각 알림 발송(N-2)은 11단계(Cron) 전까지 동작하지 않는다.** 알림 구독·테스트 알림은 지금도 된다.
 - iPhone은 **홈 화면에 추가한 앱**에서만 웹 푸시를 받을 수 있다(iOS 16.4+).
 - **브라우저 데이터를 지우면 다른 사람으로 인식된다.** 기기를 바꿀 때는 옛 기기가 남아 있을 때 **기기 옮기기 코드**로 옮겨야 한다. 옛 기기를 잃어버리면 복구할 수 없다(로그인이 없는 설계의 대가).
 - 실시간 채널은 공개 채널이라, 내보내진 사람이 세션 ID를 알면 "언제 뭔가 올라왔다"는 **신호**는 볼 수 있다(내용은 볼 수 없음).
