@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { authFailure, fail, ok, type ActionResult } from "@/lib/action-result";
 import { requireHost, requireUser } from "@/lib/auth";
 import { generateInviteToken, hashToken } from "@/lib/invite-token";
-import { signalSession } from "@/lib/realtime";
+import { signalJoin, signalSession } from "@/lib/realtime";
 import { getSiteUrl } from "@/lib/site-url";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createInviteSchema, requestJoinSchema, sessionInviteSchema } from "@/lib/validators/member.schema";
@@ -61,7 +61,7 @@ export async function createInvite(
   return ok({ url: `${await getSiteUrl()}/join/${token}`, expiresAt: invite.expires_at, kind });
 }
 
-/** I-3: 쓰지 않은 링크 취소. */
+/** I-3: 쓰지 않은 링크 취소. 그룹 링크(I-11)면 그 링크로 들어와 기다리던 요청도 함께 정리한다. */
 export async function revokeInvite(sessionId: string, inviteId: string): Promise<ActionResult> {
   const parsed = sessionInviteSchema.safeParse({ sessionId, inviteId });
   if (!parsed.success) return fail("VALIDATION_ERROR", "잘못된 요청이에요.");
@@ -72,7 +72,8 @@ export async function revokeInvite(sessionId: string, inviteId: string): Promise
     return authFailure(error);
   }
 
-  const { error } = await createAdminClient()
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("invites")
     .update({ status: "revoked" })
     .eq("id", parsed.data.inviteId)
@@ -82,6 +83,17 @@ export async function revokeInvite(sessionId: string, inviteId: string): Promise
     console.error({ action: "revokeInvite", ...parsed.data, error });
     return fail("INTERNAL", "링크를 취소하지 못했어요.");
   }
+
+  // 이미 승인된 멤버는 그대로 두고, 대기 중인 요청만 지운다. 기다리던 화면은 신호를 받고 "취소된 링크"로 바뀐다.
+  const { data: dropped, error: dropError } = await admin
+    .from("members")
+    .delete()
+    .eq("invite_id", parsed.data.inviteId)
+    .eq("session_id", parsed.data.sessionId)
+    .eq("status", "pending")
+    .select("id");
+  if (dropError) console.error({ action: "revokeInvite.pending", ...parsed.data, error: dropError });
+  await Promise.all((dropped ?? []).map((m) => signalJoin(m.id, { type: "member.rejected" })));
 
   refresh();
   return ok(undefined);
@@ -193,7 +205,7 @@ async function joinWithGroupInvite(admin: Admin, invite: InviteRow, userId: stri
     console.error({ action: "requestJoin.groupCheck", userId, error: rejection.error ?? waiting.error });
     return fail("INTERNAL", "참여 요청을 보내지 못했어요. 잠시 후 다시 시도해주세요.");
   }
-  if (rejection.data) return fail("UNAUTHORIZED", "방장이 이 기기의 참여 요청을 거절했어요.");
+  if (rejection.data) return fail("UNAUTHORIZED", "이 링크로는 참여할 수 없어요. 방장에게 새 링크를 받아주세요.");
   if ((waiting.count ?? 0) >= MAX_PENDING_PER_GROUP_INVITE) {
     return fail("RATE_LIMITED", "승인을 기다리는 사람이 너무 많아요. 잠시 후 다시 시도해주세요.");
   }

@@ -63,7 +63,9 @@ async function JoinContent({ params }: { params: PageProps<"/join/[token]">["par
 
   const message =
     state.kind === "rejected"
-      ? { title: "참여가 거절됐어요", body: `${state.sessionName} 방장이 요청을 거절했어요.` }
+      ? state.group
+        ? { title: "이 링크로는 참여할 수 없어요", body: `${state.sessionName}에 다시 들어가려면 방장에게 새 링크를 받아주세요.` }
+        : { title: "참여가 거절됐어요", body: `${state.sessionName} 방장이 요청을 거절했어요.` }
       : DEAD_LINK[state.kind];
 
   return (

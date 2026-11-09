@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { addComment } from "@/app/actions/comment";
 import { Button } from "@/components/ui/button";
+import { useResetOnHide } from "@/hooks/use-reset-on-hide";
 import { cn } from "@/lib/utils";
 import { COMMENT_MAX } from "@/lib/validators/comment.schema";
 
@@ -11,7 +12,10 @@ type State = Awaited<ReturnType<typeof addComment>> | null;
 export function CommentForm({ sessionId, postId }: { sessionId: string; postId: string }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [length, setLength] = useState(0);
+  // 다른 화면에 다녀오면 지난 에러는 지운다 (입력 중이던 글은 그대로 둔다)
+  const { stale, markFresh } = useResetOnHide();
   const [state, formAction, pending] = useActionState<State, FormData>(async (_prev, formData) => {
+    markFresh();
     const result = await addComment(formData);
     if (result.success) {
       formRef.current?.reset();
@@ -19,7 +23,7 @@ export function CommentForm({ sessionId, postId }: { sessionId: string; postId: 
     }
     return result;
   }, null);
-  const failed = state && !state.success ? state : null;
+  const failed = !stale && state && !state.success ? state : null;
   const error = failed?.fieldErrors?.body?.[0] ?? failed?.error;
 
   return (

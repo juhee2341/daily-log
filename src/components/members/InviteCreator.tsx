@@ -5,6 +5,7 @@ import { createInvite } from "@/app/actions/invite";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useResetOnHide } from "@/hooks/use-reset-on-hide";
 import { cn } from "@/lib/utils";
 import type { InviteKind } from "@/types/database";
 
@@ -16,15 +17,18 @@ const KINDS: { value: InviteKind; label: string; hint: string }[] = [
 ];
 
 export function InviteCreator({ sessionId, sessionName }: { sessionId: string; sessionName: string }) {
-  const [state, formAction, pending] = useActionState<State, FormData>(
-    async (_prev, formData) => createInvite(formData),
-    null,
-  );
+  // 다른 화면에 다녀오면 방금 만든 링크·에러는 다시 보여주지 않는다 ("지금만 볼 수 있어요")
+  const { stale, markFresh } = useResetOnHide();
+  const [state, formAction, pending] = useActionState<State, FormData>(async (_prev, formData) => {
+    markFresh();
+    return createInvite(formData);
+  }, null);
   const [copied, setCopied] = useState(false);
   const [kind, setKind] = useState<InviteKind>("single");
-  const failed = state && !state.success ? state : null;
+  const shown = stale ? null : state;
+  const failed = shown && !shown.success ? shown : null;
   const memoError = failed?.fieldErrors?.memo?.[0];
-  const created = state?.success ? state.data : null;
+  const created = shown?.success ? shown.data : null;
 
   async function share(url: string, linkKind: InviteKind) {
     const text =

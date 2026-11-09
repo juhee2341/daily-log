@@ -79,19 +79,30 @@ export async function rejectMember(sessionId: string, memberId: string): Promise
  * 개인 링크는 링크 자체에, 그룹 링크(I-11)는 링크가 계속 쓰이므로 기기별로 남긴다.
  */
 async function recordRejection(inviteId: string, userId: string) {
-  const admin = createAdminClient();
-  const { data: invite, error: lookupError } = await admin.from("invites").select("kind").eq("id", inviteId).maybeSingle();
-  if (lookupError) {
-    console.error({ action: "rejectMember.lookup", inviteId, error: lookupError });
-    return;
-  }
-  // 링크가 이미 정리됐으면 남길 곳이 없다
-  if (!invite) return;
-  const { error } =
-    invite.kind === "group"
-      ? await admin.from("invite_rejections").upsert({ invite_id: inviteId, user_id: userId }, { ignoreDuplicates: true })
-      : await admin.from("invites").update({ rejected_at: new Date().toISOString() }).eq("id", inviteId);
+  const kind = await getInviteKind(inviteId);
+  // 링크를 확인하지 못했거나 이미 정리됐으면 남길 곳이 없다
+  if (!kind) return;
+  if (kind === "group") return blockOnGroupInvite(inviteId, userId);
+  const { error } = await createAdminClient()
+    .from("invites")
+    .update({ rejected_at: new Date().toISOString() })
+    .eq("id", inviteId);
   if (error) console.error({ action: "rejectMember.record", inviteId, error });
+}
+
+/** 초대 링크 종류. 조회에 실패했거나 링크가 없으면 null. */
+async function getInviteKind(inviteId: string): Promise<"single" | "group" | null> {
+  const { data, error } = await createAdminClient().from("invites").select("kind").eq("id", inviteId).maybeSingle();
+  if (error) console.error({ action: "member.inviteKind", inviteId, error });
+  return data?.kind ?? null;
+}
+
+/** 이 기기가 해당 그룹 링크로 다시 요청하지 못하게 기록한다. */
+async function blockOnGroupInvite(inviteId: string, userId: string) {
+  const { error } = await createAdminClient()
+    .from("invite_rejections")
+    .upsert({ invite_id: inviteId, user_id: userId }, { ignoreDuplicates: true });
+  if (error) console.error({ action: "member.blockOnGroupInvite", inviteId, error });
 }
 
 /** I-7, I-8: 방장이 멤버를 내보낸다. 그 사람의 포스트·댓글·미디어가 모두 삭제된다. */
@@ -112,12 +123,19 @@ export async function kickMember(sessionId: string, memberId: string): Promise<A
     .eq("session_id", parsed.data.sessionId)
     .eq("role", "member")
     .eq("status", "active")
-    .select("id");
+    .select("id, invite_id, user_id");
   if (error) {
     console.error({ action: "kickMember", ...parsed.data, error });
     return fail("INTERNAL", "내보내지 못했어요.");
   }
   if (!removed.length) return fail("NOT_FOUND", "이미 나간 멤버예요.");
+
+  // I-9: 내보낸 사람은 새 링크를 받아야 다시 들어올 수 있다 — 들어올 때 쓴 그룹 링크로는 다시 요청하지 못하게 막는다
+  const { invite_id: inviteId, user_id: userId } = removed[0];
+  if (inviteId) {
+    const invite = await getInviteKind(inviteId);
+    if (invite === "group") await blockOnGroupInvite(inviteId, userId);
+  }
 
   await cleanupMemberMedia(parsed.data.sessionId, parsed.data.memberId);
   await signalSession(parsed.data.sessionId, { type: "member.kicked", memberId: parsed.data.memberId });

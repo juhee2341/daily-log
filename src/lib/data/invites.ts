@@ -7,7 +7,7 @@ export type JoinState =
   | { kind: "revoked" }
   | { kind: "expired" }
   | { kind: "used" }
-  | { kind: "rejected"; sessionName: string }
+  | { kind: "rejected"; sessionName: string; group: boolean }
   | { kind: "pending"; sessionName: string; nickname: string; memberId: string }
   | { kind: "member"; sessionId: string }
   | { kind: "open"; sessionName: string; group: boolean };
@@ -51,8 +51,11 @@ export async function getJoinState(token: string, userId: string | null, now = n
   if (member?.status === "pending") {
     return { kind: "pending", sessionName: session.name, nickname: member.nickname, memberId: member.id };
   }
-  if (rejectionResult.data) return { kind: "rejected", sessionName: session.name };
-  if (userId && invite.used_by === userId && invite.rejected_at) return { kind: "rejected", sessionName: session.name };
+  // 그룹 링크의 기록은 거절·내보내기 모두에서 남는다
+  if (rejectionResult.data) return { kind: "rejected", sessionName: session.name, group: true };
+  if (userId && invite.used_by === userId && invite.rejected_at) {
+    return { kind: "rejected", sessionName: session.name, group: false };
+  }
 
   if (invite.status === "revoked") return { kind: "revoked" };
   if (invite.status === "used") return { kind: "used" };

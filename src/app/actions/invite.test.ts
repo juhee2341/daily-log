@@ -1,13 +1,13 @@
-import { createInvite, requestJoin } from "./invite";
+import { createInvite, requestJoin, revokeInvite } from "./invite";
 import { requireHost, requireUser } from "@/lib/auth";
 import { hashToken } from "@/lib/invite-token";
-import { signalSession } from "@/lib/realtime";
+import { signalJoin, signalSession } from "@/lib/realtime";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fakeSupabase, type FakeCall, type FakeResult } from "@/test-utils/fake-supabase";
 
 jest.mock("next/cache", () => ({ refresh: jest.fn() }));
 jest.mock("@/lib/auth", () => ({ requireUser: jest.fn(), requireHost: jest.fn() }));
-jest.mock("@/lib/realtime", () => ({ signalSession: jest.fn() }));
+jest.mock("@/lib/realtime", () => ({ signalSession: jest.fn(), signalJoin: jest.fn() }));
 jest.mock("@/lib/site-url", () => ({ getSiteUrl: jest.fn(async () => "http://localhost:3000") }));
 jest.mock("@/lib/supabase/admin", () => ({ createAdminClient: jest.fn() }));
 
@@ -197,5 +197,27 @@ describe("createInvite", () => {
 
   it("rejects unknown kinds", async () => {
     expect(await createInvite(createForm("public"))).toMatchObject({ success: false, code: "VALIDATION_ERROR" });
+  });
+});
+
+describe("revokeInvite", () => {
+  const SID = "6f1c2a5e-8b9d-4c3e-a1f2-0b1c2d3e4f50";
+  const IID = "7a2b3c4d-1e2f-4a5b-8c9d-0e1f2a3b4c5d";
+  beforeEach(() => (requireHost as jest.Mock).mockResolvedValue({}));
+
+  it("drops only the pending requests that came through the link and tells them", async () => {
+    const { calls } = setup((c) => (c.table === "members" && c.op === "delete" ? { data: [{ id: "m-1" }, { id: "m-2" }] } : undefined));
+    expect(await revokeInvite(SID, IID)).toEqual({ success: true, data: undefined });
+
+    const drop = calls.find((c) => c.table === "members" && c.op === "delete")!;
+    expect(drop.filters).toMatchObject({ "eq:invite_id": IID, "eq:session_id": SID, "eq:status": "pending" });
+    expect(signalJoin).toHaveBeenCalledWith("m-1", { type: "member.rejected" });
+    expect(signalJoin).toHaveBeenCalledWith("m-2", { type: "member.rejected" });
+  });
+
+  it("does not touch members when the link could not be revoked", async () => {
+    const { calls } = setup((c) => (c.table === "invites" && c.op === "update" ? { error: { message: "boom" } } : undefined));
+    expect(await revokeInvite(SID, IID)).toMatchObject({ success: false, code: "INTERNAL" });
+    expect(calls.some((c) => c.table === "members")).toBe(false);
   });
 });

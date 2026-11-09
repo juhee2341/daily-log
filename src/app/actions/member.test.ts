@@ -90,6 +90,30 @@ describe("rejectMember", () => {
   });
 });
 
+describe("kickMember on a group link (I-9, I-11)", () => {
+  it("blocks the kicked device from requesting again through the same group link", async () => {
+    const { calls } = setup((c) => {
+      if (c.op === "delete") return { data: [{ id: MID, invite_id: "inv-g", user_id: "user-9" }] };
+      if (c.table === "invites" && c.op === "select") return { data: { kind: "group" } };
+      return undefined;
+    });
+    (requireHost as jest.Mock).mockResolvedValue({});
+    expect(await kickMember(SID, MID)).toEqual({ success: true, data: undefined });
+    expect(calls.find((c) => c.table === "invite_rejections")!.payload).toEqual({ invite_id: "inv-g", user_id: "user-9" });
+  });
+
+  it("leaves single links alone (they are already used up)", async () => {
+    const { calls } = setup((c) => {
+      if (c.op === "delete") return { data: [{ id: MID, invite_id: "inv-s", user_id: "user-9" }] };
+      if (c.table === "invites" && c.op === "select") return { data: { kind: "single" } };
+      return undefined;
+    });
+    (requireHost as jest.Mock).mockResolvedValue({});
+    await kickMember(SID, MID);
+    expect(calls.some((c) => c.table === "invite_rejections" || (c.table === "invites" && c.op === "update"))).toBe(false);
+  });
+});
+
 describe("kickMember", () => {
   it("only deletes active non-host members, then removes their media", async () => {
     const { calls } = setup((c) => (c.op === "delete" ? { data: [{ id: MID }] } : undefined));

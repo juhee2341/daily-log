@@ -37,7 +37,7 @@ describe("getJoinState", () => {
 
   it("shows the rejection to a device rejected on a group link, even though the link is still open", async () => {
     setup(invite({ kind: "group" }), (c) => (c.table === "invite_rejections" ? { data: { invite_id: "inv-1" } } : undefined));
-    expect(await getJoinState(TOKEN, "u1", NOW)).toEqual({ kind: "rejected", sessionName: "MT" });
+    expect(await getJoinState(TOKEN, "u1", NOW)).toEqual({ kind: "rejected", sessionName: "MT", group: true });
   });
 
   it("does not look up group rejections for single links", async () => {
