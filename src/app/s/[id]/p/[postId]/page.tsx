@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { CommentForm } from "@/components/comment/CommentForm";
 import { CommentList } from "@/components/comment/CommentList";
 import { CancelPostButton } from "@/components/post/CancelPostButton";
+import { PostMedia } from "@/components/post/PostMedia";
 import { SessionSignalRefresher } from "@/components/session/SessionSignalRefresher";
 import { Button } from "@/components/ui/button";
 import { AuthError, requireMember } from "@/lib/auth";
@@ -49,14 +50,11 @@ async function PostContent({ params }: { params: PageProps<"/s/[id]/p/[postId]">
       </nav>
 
       <figure className="flex flex-col gap-3">
-        <div className="overflow-hidden rounded-2xl bg-black">
-          {post.mediaType === "video" ? (
-            <video src={post.mediaUrl} className="max-h-[70dvh] w-full object-contain" controls playsInline autoPlay loop muted aria-label={`${post.nickname}의 영상`} />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element -- 서명 URL
-            <img src={post.mediaUrl} alt={`${post.nickname}의 사진`} className="max-h-[70dvh] w-full object-contain" />
-          )}
-        </div>
+        <PostMedia
+          type={post.mediaType}
+          url={post.mediaUrl}
+          label={`${post.nickname}의 ${post.mediaType === "video" ? "영상" : "사진"}`}
+        />
         <figcaption className="flex flex-col gap-1">
           <p className="text-sm">
             <strong>{post.nickname}</strong>

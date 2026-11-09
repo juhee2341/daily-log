@@ -48,7 +48,7 @@ export function PendingItem({
           거절
         </Button>
         <Button size="sm" disabled={pending} onClick={() => run(approveMember)}>
-          승인
+          {pending ? "처리 중..." : "승인"}
         </Button>
       </div>
     </li>

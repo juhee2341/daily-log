@@ -5,6 +5,7 @@ import { deletePushSubscription, savePushSubscription, sendTestPush, updateQuiet
 import { Button } from "@/components/ui/button";
 import { publicEnv } from "@/lib/public-env";
 import { detectPushSupport, registerServiceWorker, urlBase64ToUint8Array, type PushSupport } from "@/lib/pwa";
+import { FormSkeleton } from "@/components/skeletons/PageSkeletons";
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 const subscribe = () => () => {};
@@ -91,7 +92,7 @@ export function NotificationSettings({ initialQuiet }: Props) {
     });
 
   if (support === null || (support === "supported" && endpoint === undefined)) {
-    return <div className="h-24 animate-pulse rounded-xl bg-muted motion-reduce:animate-none" aria-hidden />;
+    return <FormSkeleton rows={1} />;
   }
   if (support === "ios-needs-install") {
     return <p className="rounded-xl bg-muted p-4 text-sm leading-relaxed">iPhone에서는 <strong>홈 화면에 추가</strong>한 daily-log 앱에서만 알림을 받을 수 있어요. 아래 안내대로 추가한 뒤, 홈 화면 아이콘으로 열어서 알림을 켜주세요.</p>;

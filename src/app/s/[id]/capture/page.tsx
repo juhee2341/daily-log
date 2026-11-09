@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { CaptureCamera } from "@/components/capture/CaptureCamera";
+import { Spinner } from "@/components/common/Spinner";
 import { AuthError, requireMember } from "@/lib/auth";
 import { sessionIdSchema } from "@/lib/validators/session.schema";
 
@@ -9,7 +10,13 @@ export const metadata: Metadata = { title: "촬영" };
 
 export default function CapturePage({ params }: PageProps<"/s/[id]/capture">) {
   return (
-    <Suspense fallback={<div className="fixed inset-0 bg-black" aria-hidden />}>
+    <Suspense
+      fallback={
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black text-white/70">
+          <Spinner label="촬영 화면을 여는 중" />
+        </div>
+      }
+    >
       <CaptureContent params={params} />
     </Suspense>
   );

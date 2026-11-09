@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Spinner } from "@/components/common/Spinner";
 import { formatKst } from "@/lib/slot";
 import { PHOTO_MS, type VlogItem } from "@/lib/vlog";
 
@@ -16,6 +17,9 @@ export function VlogPlayer({ items }: { items: VlogItem[] }) {
   const [held, setHeld] = useState(false);
   const [muted, setMuted] = useState(false);
   const [progress, setProgress] = useState(0);
+  // 지금 항목의 미디어가 보여줄 수 있을 만큼 받아졌는지 (느린 네트워크에서 빈 화면으로 2초가 지나가지 않게)
+  const [readyId, setReadyId] = useState<string | null>(null);
+  const [stalled, setStalled] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const pressTimer = useRef<number | null>(null);
   const longPressed = useRef(false);
@@ -25,16 +29,20 @@ export function VlogPlayer({ items }: { items: VlogItem[] }) {
   const finished = index >= items.length;
   const item = finished ? null : items[index];
   const playing = started && !held && !finished;
+  const loading = !!item && (readyId !== item.id || stalled);
+  const markReady = (id: string) => setReadyId((prev) => (prev === id ? prev : id));
 
   function go(next: number) {
     photoElapsed.current = 0;
     setProgress(0);
+    setStalled(false);
     setIndex(Math.max(0, Math.min(items.length, next)));
   }
 
-  // 사진: 2초 타이머 (일시정지 중에는 멈춘다)
+  // 사진: 2초 타이머 (일시정지 중이거나 아직 안 받아졌으면 멈춘다)
+  const photoReady = item?.type === "photo" && readyId === item.id;
   useEffect(() => {
-    if (!playing || item?.type !== "photo") return;
+    if (!playing || item?.type !== "photo" || !photoReady) return;
     let raf = 0;
     let last = performance.now();
     const tick = (now: number) => {
@@ -51,7 +59,7 @@ export function VlogPlayer({ items }: { items: VlogItem[] }) {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [playing, item]);
+  }, [playing, item, photoReady]);
 
   // 영상: 재생·일시정지를 상태에 맞춘다. 소리 재생이 막히면 음소거로 다시 시도한다.
   useEffect(() => {
@@ -102,18 +110,37 @@ export function VlogPlayer({ items }: { items: VlogItem[] }) {
     <div className="relative mx-auto aspect-[9/16] max-h-[72dvh] w-full overflow-hidden rounded-2xl bg-black text-white select-none">
       {item?.type === "photo" && (
         // eslint-disable-next-line @next/next/no-img-element -- 서명 URL
-        <img src={item.url} alt={`${item.nickname}의 사진`} className="size-full object-cover" draggable={false} />
+        <img
+          key={item.id}
+          // 하이드레이션 전에 이미 받아진 경우 onLoad가 오지 않으므로 complete도 확인한다
+          ref={(el) => {
+            if (el?.complete && el.naturalWidth) markReady(item.id);
+          }}
+          src={item.url}
+          alt={`${item.nickname}의 사진`}
+          className="size-full object-cover"
+          draggable={false}
+          onLoad={() => markReady(item.id)}
+          onError={() => markReady(item.id)}
+        />
       )}
       {item?.type === "video" && (
         <video
           key={item.id}
-          ref={videoRef}
+          ref={(el) => {
+            videoRef.current = el;
+            if (el && el.readyState >= 2) markReady(item.id);
+          }}
           src={item.url}
           className="size-full object-cover"
           playsInline
           preload="auto"
           onTimeUpdate={(e) => setProgress(e.currentTarget.currentTime / (e.currentTarget.duration || item.durationMs / 1000))}
           onEnded={() => go(index + 1)}
+          onLoadedData={() => markReady(item.id)}
+          onError={() => markReady(item.id)}
+          onWaiting={() => setStalled(true)}
+          onPlaying={() => setStalled(false)}
           aria-label={`${item.nickname}의 영상`}
         />
       )}
@@ -151,6 +178,9 @@ export function VlogPlayer({ items }: { items: VlogItem[] }) {
           role="group"
           aria-label="왼쪽을 누르면 이전, 오른쪽을 누르면 다음, 길게 누르면 일시정지"
         />
+      )}
+      {started && loading && !held && (
+        <Spinner label="다음 장면을 불러오는 중" className="pointer-events-none absolute inset-0 text-white/80" />
       )}
       {held && (
         <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-4xl" aria-hidden>
