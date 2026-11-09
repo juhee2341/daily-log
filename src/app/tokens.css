@@ -1,0 +1,30 @@
+/* daily-log 디자인 토큰 (BRAND.md / tokens.css 원본 값 그대로)
+   Tailwind·shadcn이 이미 쓰는 --color-accent, --color-border 등과 이름이 겹쳐서 --dl- 접두사로 옮겼다.
+   역할 규칙:
+   - 글자는 --dl-text(검정), 강조(링크·선택·배지·포커스)는 --dl-accent(네이비)
+   - --dl-brand(테라코타)는 로고·큰 도형에만. 글자색으로 쓰지 않는다 (크림 위 3.8:1)
+   - --dl-button은 버튼 배경에만. 버튼 글자는 --dl-on-button(흰색) */
+:root {
+  /* text */
+  --dl-text: #1C1917;          /* 제목·본문 (크림 위 16.3:1) */
+  --dl-text-muted: #5C5650;    /* 설명·시간 표시 (크림 위 6.7:1) */
+
+  /* accent */
+  --dl-accent: #263D50;        /* 링크·선택·배지·포커스 (크림 위 10.5:1) */
+
+  /* brand */
+  --dl-brand: #B96750;         /* 로고, 큰 도형 (글자 금지) */
+  --dl-button: #A5563F;        /* 버튼 배경 */
+  --dl-on-button: #FFFFFF;     /* 버튼 글자 (5.3:1) */
+
+  /* surfaces */
+  --dl-bg: #FAF6F1;            /* 페이지 배경 */
+  --dl-surface: #FFFFFF;       /* 카드 */
+  --dl-border: #E5DBD0;        /* 구분선·테두리 */
+  --dl-tint: #F3E3DC;          /* 배지 배경·안내 상자 (검정 글자 14.0:1) */
+
+  /* dark */
+  --dl-bg-dark: #1C1917;
+  --dl-text-on-dark: #FAF6F1;
+  --dl-brand-on-dark: #D98B73; /* 어두운 배경 위 로고 포인트 (6.6:1) */
+}

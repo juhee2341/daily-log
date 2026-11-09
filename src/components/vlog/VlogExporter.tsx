@@ -76,7 +76,7 @@ export function VlogExporter({
     return (
       <div className="flex flex-col gap-2" role="status" aria-live="polite">
         <div className="h-2 overflow-hidden rounded-full bg-muted">
-          <div className="h-full bg-primary transition-[width]" style={{ width: `${Math.round(phase.progress * 100)}%` }} />
+          <div className="h-full bg-highlight transition-[width]" style={{ width: `${Math.round(phase.progress * 100)}%` }} />
         </div>
         <p className="text-center text-xs text-muted-foreground">
           영상 만드는 중 {Math.round(phase.progress * 100)}% · 화면을 켜둔 채로 기다려주세요

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-labelledby="t">
+  <title id="t">daily-log</title>
+  <rect width="100" height="100" rx="22" fill="#1C1917"/>
+  <g transform="translate(13 14) scale(0.45)"><path fill="#FAF6F1" fill-rule="evenodd" d="M84 0H112V104A56 56 0 1 1 84 55.5V0ZM84 104A28 28 0 1 0 28 104A28 28 0 0 0 84 104Z"/></g>
+  <rect x="70" y="55" width="17" height="12" rx="6" fill="#D98B73"/>
+</svg>

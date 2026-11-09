@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { Logo } from "@/components/brand/Logo";
 import { JoinForm } from "@/components/join/JoinForm";
 import { PendingWaiter } from "@/components/join/PendingWaiter";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,8 @@ export const metadata: Metadata = { title: "초대", robots: { index: false } };
 export default function JoinPage({ params }: PageProps<"/join/[token]">) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-4 py-10">
+      {/* 링크로 처음 들어온 사람이 어떤 서비스인지 바로 알 수 있게 */}
+      <Logo height={24} className="mx-auto" />
       <Suspense fallback={<JoinSkeleton />}>
         <JoinContent params={params} />
       </Suspense>

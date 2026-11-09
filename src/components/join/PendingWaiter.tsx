@@ -11,7 +11,7 @@ export function PendingWaiter({ memberId }: { memberId: string }) {
 
   return (
     <p role="status" aria-live="polite" className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-      <span className="size-2 animate-pulse rounded-full bg-primary motion-reduce:animate-none" aria-hidden />
+      <span className="size-2 animate-pulse rounded-full bg-highlight motion-reduce:animate-none" aria-hidden />
       방장의 승인을 기다리는 중...
     </p>
   );

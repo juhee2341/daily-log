@@ -1,10 +1,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* 브랜드 역할 색 — 선택·링크·진행 표시는 highlight(네이비), 큰 도형은 brand(테라코타) */
+  --color-highlight: var(--dl-accent);
+  --color-highlight-foreground: var(--dl-on-button);
+  --color-brand: var(--dl-brand);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
@@ -49,38 +54,40 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* shadcn 의미 변수 ← 브랜드 토큰 (tokens.css) */
+  --background: var(--dl-bg);
+  --foreground: var(--dl-text);
+  --card: var(--dl-surface);
+  --card-foreground: var(--dl-text);
+  --popover: var(--dl-surface);
+  --popover-foreground: var(--dl-text);
+  --primary: var(--dl-button);
+  --primary-foreground: var(--dl-on-button);
+  --secondary: var(--dl-tint);
+  --secondary-foreground: var(--dl-text);
+  /* 스켈레톤·비활성 탭·자리 표시: 선 색을 배경에 반쯤 섞은 중립 면 */
+  --muted: color-mix(in oklab, var(--dl-border) 55%, var(--dl-bg));
+  --muted-foreground: var(--dl-text-muted);
+  --accent: var(--dl-tint);
+  --accent-foreground: var(--dl-text);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: var(--dl-border);
+  --input: var(--dl-border);
+  --ring: var(--dl-accent);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: var(--dl-bg);
+  --sidebar-foreground: var(--dl-text);
+  --sidebar-primary: var(--dl-button);
+  --sidebar-primary-foreground: var(--dl-on-button);
+  --sidebar-accent: var(--dl-tint);
+  --sidebar-accent-foreground: var(--dl-text);
+  --sidebar-border: var(--dl-border);
+  --sidebar-ring: var(--dl-accent);
 }
 
 .dark {

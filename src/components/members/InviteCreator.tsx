@@ -65,7 +65,7 @@ export function InviteCreator({ sessionId, sessionName }: { sessionId: string; s
                 key={option.value}
                 className={cn(
                   "flex cursor-pointer flex-col gap-0.5 rounded-xl border p-3 transition-colors has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
-                  kind === option.value ? "border-primary bg-primary/5" : "hover:bg-muted/50",
+                  kind === option.value ? "border-highlight bg-highlight/5" : "hover:bg-muted/50",
                 )}
               >
                 <input

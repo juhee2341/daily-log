@@ -136,7 +136,7 @@ function TimelineView({ sessionId, timeline }: { sessionId: string; timeline: Ti
                 <li>
                   <Link
                     href={`/s/${sessionId}/capture`}
-                    className="flex aspect-[3/4] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-primary/40 text-sm font-medium text-primary hover:bg-primary/5"
+                    className="flex aspect-[3/4] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-highlight/40 text-sm font-medium text-highlight hover:bg-highlight/5"
                   >
                     <span aria-hidden className="text-2xl leading-none">
                       +

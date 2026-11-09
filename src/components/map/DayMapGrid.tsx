@@ -47,12 +47,12 @@ export function DayMapGrid({ sessionId, map }: { sessionId: string; map: DayMap 
                 {row.isMe && <span className="ml-1 text-xs font-normal text-muted-foreground">(나)</span>}
               </th>
               {row.cells.map((postId, h) => (
-                <td key={h} className={cn("h-9 px-px text-center", h === map.currentHour && "bg-primary/10")}>
+                <td key={h} className={cn("h-9 px-px text-center", h === map.currentHour && "bg-highlight/10")}>
                   {postId ? (
                     <Link
                       href={`/s/${sessionId}/p/${postId}`}
                       aria-label={`${row.nickname} ${h}시 포스트 보기`}
-                      className="mx-auto block aspect-square w-full max-w-4 rounded-full bg-primary transition-transform hover:scale-125 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="mx-auto block aspect-square w-full max-w-4 rounded-full bg-highlight transition-transform hover:scale-125 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                     />
                   ) : (
                     <span

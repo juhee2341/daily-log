@@ -24,7 +24,7 @@ export function DayTabs({ basePath, day, logDate, links = [] }: Props) {
           aria-current={day === tab.key ? "page" : undefined}
           className={cn(
             "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-            day === tab.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
+            day === tab.key ? "bg-highlight text-highlight-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
           )}
         >
           {tab.label}

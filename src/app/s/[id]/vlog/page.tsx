@@ -80,7 +80,7 @@ async function VlogContent({
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "shrink-0 rounded-full border px-3 py-1.5 text-sm whitespace-nowrap",
-                  active ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted",
+                  active ? "border-highlight bg-highlight text-highlight-foreground" : "hover:bg-muted",
                 )}
               >
                 {chip.label} <span className="text-xs opacity-70">{chip.count}</span>
