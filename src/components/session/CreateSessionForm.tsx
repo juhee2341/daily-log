@@ -26,7 +26,6 @@ export function CreateSessionForm() {
           id="name"
           name="name"
           placeholder="예: 제주도 2박 3일"
-          maxLength={30}
           autoComplete="off"
           required
           aria-invalid={!!nameError}
@@ -46,7 +45,6 @@ export function CreateSessionForm() {
           id="nickname"
           name="nickname"
           placeholder="이 세션에서 쓸 이름"
-          maxLength={12}
           autoComplete="nickname"
           required
           aria-invalid={!!nicknameError}

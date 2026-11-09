@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { addComment } from "@/app/actions/comment";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { COMMENT_MAX } from "@/lib/validators/comment.schema";
 
 type State = Awaited<ReturnType<typeof addComment>> | null;
@@ -34,7 +35,6 @@ export function CommentForm({ sessionId, postId }: { sessionId: string; postId: 
             id="comment-body"
             name="body"
             rows={1}
-            maxLength={COMMENT_MAX}
             placeholder="댓글 달기"
             required
             onChange={(e) => setLength(e.target.value.length)}
@@ -46,13 +46,19 @@ export function CommentForm({ sessionId, postId }: { sessionId: string; postId: 
             }}
             aria-invalid={!!error}
             aria-describedby={error ? "comment-error" : undefined}
-            className="field-sizing-content max-h-32 min-h-10 w-full resize-none rounded-xl border bg-background px-3 py-2 pr-12 text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="field-sizing-content max-h-32 min-h-10 w-full resize-none rounded-xl border bg-background px-3 py-2 pr-12 text-base focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           />
-          <span className="absolute right-2.5 bottom-2 text-[10px] text-muted-foreground tabular-nums" aria-hidden>
+          <span
+            className={cn(
+              "absolute right-2.5 bottom-2 text-[10px] tabular-nums",
+              length > COMMENT_MAX ? "text-destructive" : "text-muted-foreground",
+            )}
+            aria-hidden
+          >
             {length}/{COMMENT_MAX}
           </span>
         </div>
-        <Button type="submit" className="h-10" disabled={pending || length === 0}>
+        <Button type="submit" className="h-10" disabled={pending || length === 0 || length > COMMENT_MAX}>
           {pending ? "..." : "등록"}
         </Button>
       </div>

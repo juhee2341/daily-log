@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { issueCaptureTicket, publishPost, type CaptureTicket } from "@/app/actions/post";
 import { Button } from "@/components/ui/button";
 import type { ActionResult } from "@/lib/action-result";
@@ -58,6 +58,7 @@ export function CaptureCamera({ sessionId }: { sessionId: string }) {
   const [elapsed, setElapsed] = useState(0);
   const [shot, setShot] = useState<Shot | null>(null);
   const [caption, setCaption] = useState("");
+  const captionTooLong = caption.trim().length > CAPTION_MAX;
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +101,26 @@ export function CaptureCamera({ sessionId }: { sessionId: string }) {
       streamRef.current = null;
     };
   }, [mode, facing, shot]);
+
+  // Cache Components는 떠난 화면을 <Activity>로 숨겨 state를 보존한다.
+  // 촬영 화면은 매번 새로 시작해야 하므로(지난 사진·이미 쓴 촬영 티켓이 남지 않게) 숨겨질 때 초기화한다.
+  useLayoutEffect(() => {
+    return () => {
+      if (recorderRef.current?.state === "recording") {
+        recorderRef.current.onstop = null;
+        recorderRef.current.stop();
+      }
+      recorderRef.current = null;
+      ticketRef.current = null;
+      setRecordingSince(null);
+      setElapsed(0);
+      setShot(null);
+      setCaption("");
+      setUploading(false);
+      setError(null);
+      setCamera({ status: "loading" });
+    };
+  }, []);
 
   // 미리보기 blob URL 정리
   useEffect(() => {
@@ -290,14 +311,18 @@ export function CaptureCamera({ sessionId }: { sessionId: string }) {
             <div className="relative">
               <textarea
                 id="caption"
-                value={caption}
-                onChange={(e) => setCaption(e.target.value.slice(0, CAPTION_MAX))}
+                // 비제어 입력: React가 값을 다시 써넣으면 iOS 한글 조합(천지인 등)이 깨진다
+                defaultValue={caption}
+                onChange={(e) => setCaption(e.target.value)}
                 placeholder="코멘트 (선택)"
                 rows={2}
-                maxLength={CAPTION_MAX}
-                className="w-full resize-none rounded-xl bg-white/10 p-3 pr-14 text-sm placeholder:text-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                aria-invalid={captionTooLong}
+                className="w-full resize-none rounded-xl bg-white/10 p-3 pr-14 text-base placeholder:text-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
               />
-              <span className="absolute right-3 bottom-3 text-xs text-white/50 tabular-nums" aria-hidden>
+              <span
+                className={cn("absolute right-3 bottom-3 text-xs tabular-nums", captionTooLong ? "text-red-300" : "text-white/50")}
+                aria-hidden
+              >
                 {caption.length}/{CAPTION_MAX}
               </span>
             </div>
@@ -305,7 +330,7 @@ export function CaptureCamera({ sessionId }: { sessionId: string }) {
               <Button variant="secondary" size="lg" className="h-12 flex-1" onClick={retake} disabled={uploading}>
                 다시 찍기
               </Button>
-              <Button size="lg" className="h-12 flex-1 bg-white text-black hover:bg-white/90" onClick={upload} disabled={uploading || tooShort}>
+              <Button size="lg" className="h-12 flex-1 bg-white text-black hover:bg-white/90" onClick={upload} disabled={uploading || tooShort || captionTooLong}>
                 {uploading ? "올리는 중..." : "올리기"}
               </Button>
             </div>

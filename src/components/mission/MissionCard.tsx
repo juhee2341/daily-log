@@ -4,7 +4,6 @@ import { useActionState, useState } from "react";
 import { setMission } from "@/app/actions/mission";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MISSION_MAX } from "@/lib/validators/mission.schema";
 
 type State = Awaited<ReturnType<typeof setMission>> | null;
 type Props = { sessionId: string; mission: string | null; canEdit: boolean };
@@ -31,7 +30,6 @@ export function MissionCard({ sessionId, mission, canEdit }: Props) {
           id="mission"
           name="body"
           defaultValue={mission ?? ""}
-          maxLength={MISSION_MAX}
           placeholder="예: 점심 메뉴 찍기"
           autoComplete="off"
           autoFocus
