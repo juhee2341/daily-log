@@ -27,4 +27,9 @@
   --dl-bg-dark: #1C1917;
   --dl-text-on-dark: #FAF6F1;
   --dl-brand-on-dark: #D98B73; /* 어두운 배경 위 로고 포인트 (6.6:1) */
+
+  /* type — 본문·UI는 Pretendard (layout.tsx에서 다이내믹 서브셋 CSS를 불러온다).
+     로고타입은 logo-wordmark.svg(윤곽선)를 쓰므로 Fraunces는 불러오지 않는다. */
+  --dl-font-body: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo",
+    "Noto Sans KR", "Malgun Gothic", sans-serif;
 }

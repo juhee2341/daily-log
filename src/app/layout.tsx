@@ -1,13 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
+// 본문·UI 글꼴 Pretendard (OFL). 다이내믹 서브셋: 화면에 쓰인 글자가 든 조각만 내려받는다.
+import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import { InAppBrowserGate } from "@/components/browser/InAppBrowserGate";
 import { BRAND_BG } from "@/lib/brand";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-sans",
-  subsets: ["latin"],
-});
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -35,7 +32,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ko" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="ko" className={`${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-background text-foreground">
         {children}
         <InAppBrowserGate />

@@ -48,4 +48,4 @@
 - 추가 유틸리티: `highlight`(네이비 — 선택된 탭·칩, 진행 막대, 텍스트 링크), `brand`(테라코타 — 큰 도형 전용).
 - 아이콘: `public/` (favicon.svg·favicon-32·apple-touch-icon·icon-192·icon-512). 안드로이드 maskable용 `icon-maskable-512.png`는 배경을 꽉 채우고 마크를 안전 영역 안에 줄여 새로 만들었다.
 - 로고: `<Logo />` (`src/components/brand/Logo.tsx`) — 홈 헤더 30px, 초대 화면 24px.
-- 본문 글꼴은 아직 시스템 글꼴(iOS는 Apple SD 산돌고딕). Noto Sans KR은 목업용 임시 글꼴이라 적용하지 않았다.
+- 본문·UI 글꼴: **Pretendard** (`pretendard` 패키지, SIL OFL). 다이내믹 서브셋 CSS를 `layout.tsx`에서 불러와 쓰인 글자 조각만 받는다. 토큰은 `--dl-font-body`. 고정폭(초대 링크·옮기기 코드)은 Geist Mono 유지.
