@@ -80,9 +80,15 @@ export async function rejectMember(sessionId: string, memberId: string): Promise
  */
 async function recordRejection(inviteId: string, userId: string) {
   const admin = createAdminClient();
-  const { data: invite } = await admin.from("invites").select("kind").eq("id", inviteId).maybeSingle();
+  const { data: invite, error: lookupError } = await admin.from("invites").select("kind").eq("id", inviteId).maybeSingle();
+  if (lookupError) {
+    console.error({ action: "rejectMember.lookup", inviteId, error: lookupError });
+    return;
+  }
+  // 링크가 이미 정리됐으면 남길 곳이 없다
+  if (!invite) return;
   const { error } =
-    invite?.kind === "group"
+    invite.kind === "group"
       ? await admin.from("invite_rejections").upsert({ invite_id: inviteId, user_id: userId }, { ignoreDuplicates: true })
       : await admin.from("invites").update({ rejected_at: new Date().toISOString() }).eq("id", inviteId);
   if (error) console.error({ action: "rejectMember.record", inviteId, error });

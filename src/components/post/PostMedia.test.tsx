@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { PostMedia } from "./PostMedia";
 
 describe("PostMedia", () => {
@@ -13,5 +13,16 @@ describe("PostMedia", () => {
     render(<PostMedia type="photo" url="https://x.test/a.jpg" label="민지의 사진" />);
     fireEvent.error(screen.getByAltText("민지의 사진"));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+});
+
+describe("PostMedia fallback", () => {
+  it("reveals a video that never reports loading (e.g. iOS low power mode) so it can be played by hand", () => {
+    jest.useFakeTimers();
+    render(<PostMedia type="video" url="https://x.test/a.mp4" label="민지의 영상" />);
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    act(() => jest.advanceTimersByTime(4000));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    jest.useRealTimers();
   });
 });

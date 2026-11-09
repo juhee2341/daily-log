@@ -62,7 +62,11 @@ describe("approveMember", () => {
 
 describe("rejectMember", () => {
   it("deletes the pending member, records the rejection and signals the requester", async () => {
-    const { calls } = setup((c) => (c.op === "delete" ? { data: [{ invite_id: "inv-1" }] } : undefined));
+    const { calls } = setup((c) => {
+      if (c.op === "delete") return { data: [{ invite_id: "inv-1", user_id: "user-9" }] };
+      if (c.table === "invites" && c.op === "select") return { data: { kind: "single" } };
+      return undefined;
+    });
     (requireHost as jest.Mock).mockResolvedValue({});
     expect(await rejectMember(SID, MID)).toEqual({ success: true, data: undefined });
     const mark = calls.find((c) => c.table === "invites" && c.op === "update")!;

@@ -50,6 +50,8 @@ export function CaptureCamera({ sessionId }: { sessionId: string }) {
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const ticketRef = useRef<Promise<ActionResult<CaptureTicket>> | null>(null);
+  // 화면이 숨겨질 때마다 1씩 오른다. 셔터 직후 바로 나간 경우, 늦게 끝난 캡처가 숨겨진 화면에 남지 않게 한다.
+  const visitRef = useRef(0);
 
   const [mode, setMode] = useState<Mode>("photo");
   const [facing, setFacing] = useState<Facing>("environment");
@@ -106,6 +108,7 @@ export function CaptureCamera({ sessionId }: { sessionId: string }) {
   // 촬영 화면은 매번 새로 시작해야 하므로(지난 사진·이미 쓴 촬영 티켓이 남지 않게) 숨겨질 때 초기화한다.
   useLayoutEffect(() => {
     return () => {
+      visitRef.current += 1;
       if (recorderRef.current?.state === "recording") {
         recorderRef.current.onstop = null;
         recorderRef.current.stop();
@@ -156,7 +159,9 @@ export function CaptureCamera({ sessionId }: { sessionId: string }) {
     setError(null);
     // 셔터 시점에 슬롯을 확정한다 (P-4)
     ticketRef.current = issueCaptureTicket({ sessionId, mimeType: "image/jpeg" });
+    const visit = visitRef.current;
     const [blob, thumb] = await Promise.all([grabFrame(video, PHOTO_MAX_SIDE, 0.85), grabFrame(video, THUMB_MAX_SIDE, 0.7)]);
+    if (visit !== visitRef.current) return;
     setShot({ mime: "image/jpeg", blob, thumb, url: URL.createObjectURL(blob) });
   }
 
@@ -175,7 +180,9 @@ export function CaptureCamera({ sessionId }: { sessionId: string }) {
     }
     setError(null);
     ticketRef.current = issueCaptureTicket({ sessionId, mimeType: mime });
+    const visit = visitRef.current;
     const thumb = await grabFrame(video, THUMB_MAX_SIDE, 0.7);
+    if (visit !== visitRef.current) return;
 
     const chunks: Blob[] = [];
     const recorder = new MediaRecorder(stream, { mimeType: recorderMime, videoBitsPerSecond: 2_500_000 });

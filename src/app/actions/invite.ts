@@ -101,11 +101,15 @@ export async function requestJoin(formData: FormData): Promise<ActionResult> {
   }
 
   const admin = createAdminClient();
-  const { data: invite } = await admin
+  const { data: invite, error: inviteError } = await admin
     .from("invites")
     .select("id, session_id, kind, status, expires_at")
     .eq("token_hash", hashToken(token))
     .maybeSingle();
+  if (inviteError) {
+    console.error({ action: "requestJoin.invite", userId, error: inviteError });
+    return fail("INTERNAL", "참여 요청을 보내지 못했어요. 잠시 후 다시 시도해주세요.");
+  }
   if (!invite) return fail("NOT_FOUND", "유효하지 않은 링크예요.");
 
   const [mine, sameNickname] = await Promise.all([
@@ -184,6 +188,11 @@ async function joinWithGroupInvite(admin: Admin, invite: InviteRow, userId: stri
       .eq("invite_id", invite.id)
       .eq("status", "pending"),
   ]);
+  // 거절 기록·대기 인원을 확인하지 못하면 통과시키지 않는다
+  if (rejection.error || waiting.error) {
+    console.error({ action: "requestJoin.groupCheck", userId, error: rejection.error ?? waiting.error });
+    return fail("INTERNAL", "참여 요청을 보내지 못했어요. 잠시 후 다시 시도해주세요.");
+  }
   if (rejection.data) return fail("UNAUTHORIZED", "방장이 이 기기의 참여 요청을 거절했어요.");
   if ((waiting.count ?? 0) >= MAX_PENDING_PER_GROUP_INVITE) {
     return fail("RATE_LIMITED", "승인을 기다리는 사람이 너무 많아요. 잠시 후 다시 시도해주세요.");

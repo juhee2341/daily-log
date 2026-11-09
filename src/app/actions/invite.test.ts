@@ -150,6 +150,16 @@ describe("requestJoin with a group link (I-11)", () => {
     expect(await requestJoin(form("민지"))).toEqual({ success: true, data: undefined });
   });
 
+  it("fails closed when the rejection check itself errors", async () => {
+    const { calls } = setup((c) => {
+      if (c.table === "invites" && c.op === "select") return { data: GROUP() };
+      if (c.table === "invite_rejections") return { error: { message: "boom" } };
+      return undefined;
+    });
+    expect(await requestJoin(form("민지"))).toMatchObject({ success: false, code: "INTERNAL" });
+    expect(calls.some((c) => c.table === "members" && c.op === "insert")).toBe(false);
+  });
+
   it("caps how many people can wait on one group link", async () => {
     setup((c) => {
       if (c.table === "invites" && c.op === "select") return { data: GROUP() };
