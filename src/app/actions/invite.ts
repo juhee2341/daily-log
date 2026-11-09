@@ -191,7 +191,16 @@ async function joinWithGroupInvite(admin: Admin, invite: InviteRow, userId: stri
 
   const { error } = await admin.from("members").insert(pendingMember(invite, userId, nickname));
   if (error) {
-    if (error.code === UNIQUE_VIOLATION) return fail("VALIDATION_ERROR", "입력값을 확인해주세요.", NICKNAME_TAKEN);
+    if (error.code === UNIQUE_VIOLATION) {
+      // 같은 기기가 두 번 연달아 누른 경우: 먼저 들어간 요청이 있으면 성공으로 본다
+      const { data: mine } = await admin
+        .from("members")
+        .select("id")
+        .eq("session_id", invite.session_id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      return mine ? null : fail("VALIDATION_ERROR", "입력값을 확인해주세요.", NICKNAME_TAKEN);
+    }
     console.error({ action: "requestJoin.groupMember", userId, error });
     return fail("INTERNAL", "참여 요청을 보내지 못했어요.");
   }

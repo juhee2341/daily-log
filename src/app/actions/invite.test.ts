@@ -136,6 +136,20 @@ describe("requestJoin with a group link (I-11)", () => {
     expect(await requestJoin(form("민지"))).toMatchObject({ success: false, code: "NOT_FOUND" });
   });
 
+  it("treats a double submit from the same device as success, not a nickname clash", async () => {
+    let inserted = false;
+    setup((c) => {
+      if (c.table === "invites" && c.op === "select") return { data: GROUP() };
+      if (c.table === "members" && c.op === "insert") {
+        inserted = true;
+        return { error: { code: "23505", message: "dup" } };
+      }
+      if (c.table === "members" && c.filters["eq:user_id"]) return { data: inserted ? { id: "m-1" } : null };
+      return undefined;
+    });
+    expect(await requestJoin(form("민지"))).toEqual({ success: true, data: undefined });
+  });
+
   it("caps how many people can wait on one group link", async () => {
     setup((c) => {
       if (c.table === "invites" && c.op === "select") return { data: GROUP() };
