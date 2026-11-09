@@ -10,13 +10,14 @@ import { getDayMap } from "@/lib/data/day-map";
 import { getSessionOverview } from "@/lib/data/sessions";
 import { dayParamSchema } from "@/lib/validators/post.schema";
 import { sessionIdSchema } from "@/lib/validators/session.schema";
+import { DayMapSkeleton } from "@/components/skeletons/PageSkeletons";
 
 export const metadata: Metadata = { title: "하루 지도" };
 
 export default function MapPage({ params, searchParams }: PageProps<"/s/[id]/map">) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
-      <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-muted motion-reduce:animate-none" aria-hidden />}>
+      <Suspense fallback={<DayMapSkeleton />}>
         <MapContent params={params} searchParams={searchParams} />
       </Suspense>
     </main>

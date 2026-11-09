@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { TransferRedeemForm } from "@/components/transfer/TransferRedeemForm";
 import { normalizeTransferCode } from "@/lib/transfer-format";
+import { FormSkeleton } from "@/components/skeletons/PageSkeletons";
 
 export const metadata: Metadata = { title: "기기 옮기기", robots: { index: false } };
 
@@ -18,7 +19,7 @@ export default function TransferPage({ searchParams }: PageProps<"/transfer">) {
         <h1 className="text-xl font-bold">기기 옮기기</h1>
         <p className="text-sm text-muted-foreground">옛 기기에서 참여하던 세션을 이 기기로 가져와요. 방장 권한도 함께 옮겨져요.</p>
       </header>
-      <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted motion-reduce:animate-none" aria-hidden />}>
+      <Suspense fallback={<FormSkeleton rows={1} />}>
         <TransferForm searchParams={searchParams} />
       </Suspense>
     </main>

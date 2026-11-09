@@ -3,7 +3,7 @@
 
 export type FakeCall = {
   table: string;
-  op: "select" | "insert" | "update" | "delete";
+  op: "select" | "insert" | "upsert" | "update" | "delete";
   filters: Record<string, unknown>;
   payload?: unknown;
 };
@@ -23,7 +23,8 @@ export function fakeSupabase(handler: (call: FakeCall) => FakeResult | undefined
     };
     builder.select = chain();
     builder.insert = chain((payload) => Object.assign(call, { op: "insert", payload }));
-    builder.update = chain((payload) => Object.assign(call, { op: "update", payload }));
+    builder.upsert = chain((payload) => Object.assign(call, { op: "upsert", payload }));
+  builder.update = chain((payload) => Object.assign(call, { op: "update", payload }));
     builder.delete = chain(() => (call.op = "delete"));
     for (const name of ["eq", "neq", "gt", "gte", "lt", "lte", "in", "is"]) {
       builder[name] = chain((col, value) => (call.filters[`${name}:${String(col)}`] = value));

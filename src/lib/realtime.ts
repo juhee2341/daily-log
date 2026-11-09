@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SIGNAL_EVENT, joinTopic, sessionTopic, type JoinSignal, type SessionSignal } from "@/lib/signals";
 
@@ -16,5 +17,11 @@ async function send(topic: string, payload: SessionSignal | JoinSignal) {
   }
 }
 
-export const signalSession = (sessionId: string, signal: SessionSignal) => send(sessionTopic(sessionId), signal);
-export const signalJoin = (memberId: string, signal: JoinSignal) => send(joinTopic(memberId), signal);
+/** 신호는 응답을 보낸 뒤에 발행한다 — 사용자 화면이 브로드캐스트 왕복을 기다리지 않게. */
+function schedule(topic: string, payload: SessionSignal | JoinSignal): Promise<void> {
+  after(() => send(topic, payload));
+  return Promise.resolve();
+}
+
+export const signalSession = (sessionId: string, signal: SessionSignal) => schedule(sessionTopic(sessionId), signal);
+export const signalJoin = (memberId: string, signal: JoinSignal) => schedule(joinTopic(memberId), signal);

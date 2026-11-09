@@ -11,13 +11,14 @@ import { AuthError, requireMember } from "@/lib/auth";
 import { getComments, getPostDetail } from "@/lib/data/timeline";
 import { formatKst } from "@/lib/slot";
 import { postRefSchema } from "@/lib/validators/post.schema";
+import { PostSkeleton } from "@/components/skeletons/PageSkeletons";
 
 export const metadata: Metadata = { title: "포스트" };
 
 export default function PostPage({ params }: PageProps<"/s/[id]/p/[postId]">) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
-      <Suspense fallback={<div className="aspect-[3/4] animate-pulse rounded-2xl bg-muted motion-reduce:animate-none" aria-hidden />}>
+      <Suspense fallback={<PostSkeleton />}>
         <PostContent params={params} />
       </Suspense>
     </main>

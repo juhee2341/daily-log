@@ -51,24 +51,21 @@ export async function getTimeline(
   if (members.error) throw members.error;
 
   const nicknames = new Map(members.data.map((m) => [m.id, m.nickname]));
-  const signed = posts.data.length
-    ? await admin.storage.from(MEDIA_BUCKET).createSignedUrls(
-        posts.data.map((p) => p.thumb_path),
-        SIGNED_URL_TTL_S,
-      )
-    : { data: [], error: null };
+  // 썸네일 서명 URL과 댓글 수는 서로 독립이라 함께 요청한다
+  const postIds = posts.data.map((p) => p.id);
+  const [signed, comments] = postIds.length
+    ? await Promise.all([
+        admin.storage.from(MEDIA_BUCKET).createSignedUrls(
+          posts.data.map((p) => p.thumb_path),
+          SIGNED_URL_TTL_S,
+        ),
+        admin.from("comments").select("post_id").in("post_id", postIds).is("deleted_at", null),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+      ];
   const thumbUrls = new Map((signed.data ?? []).map((s) => [s.path, s.signedUrl]));
-
-  const comments = posts.data.length
-    ? await admin
-        .from("comments")
-        .select("post_id")
-        .in(
-          "post_id",
-          posts.data.map((p) => p.id),
-        )
-        .is("deleted_at", null)
-    : { data: [], error: null };
   if (comments.error) throw comments.error;
   const commentCounts = new Map<string, number>();
   for (const c of comments.data) commentCounts.set(c.post_id, (commentCounts.get(c.post_id) ?? 0) + 1);

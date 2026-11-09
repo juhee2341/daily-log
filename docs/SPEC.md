@@ -52,6 +52,11 @@
 - **I-8** 나가거나 내보내지면 **그 사람의 포스트·미디어·댓글이 전부 삭제**된다.
 - **I-9** 나간 사람도 새 링크를 받고 다시 승인받으면 재참여할 수 있다. 이전 기록은 복구되지 않는다.
 - **I-10** 링크 상태별 안내 화면을 둔다: 만료됨 / 이미 사용됨 / 거절됨 / 세션 없음(폭파).
+- **I-11 그룹 초대 링크**: 링크를 만들 때 **개인 링크**(1명·1회용, I-2)와 **그룹 링크** 중에서 고른다. 그룹 링크는 단톡방 등에 한 번 올리면 24시간 동안(또는 취소 전까지) 여러 명이 쓸 수 있다.
+  - 쓰는 사람마다 닉네임 입력 → 승인 대기로 넘어가고, 방장이 한 명씩 승인·거절한다(승인은 그대로 필요).
+  - 거절해도 링크는 살아 있다. 대신 거절된 기기는 같은 링크로 다시 요청할 수 없고 "거절됨" 화면을 본다.
+  - 링크 하나로 동시에 승인 대기할 수 있는 인원은 50명까지다.
+  - 방장의 링크 목록에는 그룹 링크와 그 링크로 들어온(대기 포함) 인원이 표시된다.
 
 ## 5. 포스트
 
@@ -117,7 +122,7 @@
 | 푸시 | Web Push (VAPID, `web-push`) + 서비스 워커 |
 | UI | Tailwind CSS v4 |
 | 검증·시간 | zod, date-fns + `@date-fns/tz` |
-| 배포 | Vercel |
+| 배포 | Vercel (함수 리전 `icn1` 서울 — Supabase `ap-northeast-2`와 같은 지역, `vercel.json`) |
 
 ## 구현 원칙
 
@@ -146,10 +151,20 @@ invites (
   session_id  uuid fk → sessions on delete cascade,
   token_hash  text unique not null,
   memo        varchar(20),
+  kind        'single' | 'group',              -- I-11, 그룹은 'used'가 되지 않음
   status      'open' | 'used' | 'revoked',
   created_at  timestamptz not null,
   expires_at  timestamptz not null,            -- created_at + 24h, 조회 시 비교
-  used_at     timestamptz
+  used_at     timestamptz,
+  used_by     uuid,                            -- 개인 링크를 쓴 기기
+  rejected_at timestamptz                      -- 개인 링크 거절 기록
+)
+
+invite_rejections (                            -- 그룹 링크에서 거절된 기기 (I-11)
+  invite_id   uuid fk → invites on delete cascade,
+  user_id     uuid not null,
+  created_at  timestamptz not null,
+  primary key (invite_id, user_id)
 )
 
 members (
@@ -268,3 +283,4 @@ push_subscriptions (
 9. 웹 푸시 + PWA ✅
 10. 기기 옮기기 ✅
 11. Cron (정리·자동 폭파·푸시) ✅
+12. 그룹 초대 링크 + 로딩 스켈레톤 + 응답 속도 개선 ✅

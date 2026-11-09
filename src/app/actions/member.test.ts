@@ -70,6 +70,20 @@ describe("rejectMember", () => {
     expect(mark.payload).toEqual({ rejected_at: expect.any(String) });
     expect(signalJoin).toHaveBeenCalledWith(MID, { type: "member.rejected" });
   });
+
+  it("keeps a group link alive and records the rejection per device (I-11)", async () => {
+    const { calls } = setup((c) => {
+      if (c.op === "delete") return { data: [{ invite_id: "inv-1", user_id: "user-9" }] };
+      if (c.table === "invites" && c.op === "select") return { data: { kind: "group" } };
+      return undefined;
+    });
+    (requireHost as jest.Mock).mockResolvedValue({});
+    expect(await rejectMember(SID, MID)).toEqual({ success: true, data: undefined });
+    expect(calls.some((c) => c.table === "invites" && c.op === "update")).toBe(false);
+    const record = calls.find((c) => c.table === "invite_rejections")!;
+    expect(record.op).toBe("upsert");
+    expect(record.payload).toEqual({ invite_id: "inv-1", user_id: "user-9" });
+  });
 });
 
 describe("kickMember", () => {

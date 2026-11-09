@@ -13,13 +13,14 @@ import { cn } from "@/lib/utils";
 import { dayParamSchema } from "@/lib/validators/post.schema";
 import { sessionIdSchema } from "@/lib/validators/session.schema";
 import { z } from "zod";
+import { VlogSkeleton } from "@/components/skeletons/PageSkeletons";
 
 export const metadata: Metadata = { title: "브이로그" };
 
 export default function VlogPage({ params, searchParams }: PageProps<"/s/[id]/vlog">) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
-      <Suspense fallback={<div className="aspect-[9/16] max-h-[72dvh] animate-pulse rounded-2xl bg-muted motion-reduce:animate-none" aria-hidden />}>
+      <Suspense fallback={<VlogSkeleton />}>
         <VlogContent params={params} searchParams={searchParams} />
       </Suspense>
     </main>

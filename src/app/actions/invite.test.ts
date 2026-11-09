@@ -1,5 +1,5 @@
-import { requestJoin } from "./invite";
-import { requireUser } from "@/lib/auth";
+import { createInvite, requestJoin } from "./invite";
+import { requireHost, requireUser } from "@/lib/auth";
 import { hashToken } from "@/lib/invite-token";
 import { signalSession } from "@/lib/realtime";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -101,5 +101,77 @@ describe("requestJoin", () => {
     const updates = calls.filter((c) => c.table === "invites" && c.op === "update");
     expect(updates[1].payload).toEqual({ status: "open", used_at: null, used_by: null });
     expect(signalSession).not.toHaveBeenCalled();
+  });
+});
+
+describe("requestJoin with a group link (I-11)", () => {
+  const future = () => new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const GROUP = () => ({ ...INVITE, kind: "group", status: "open", expires_at: future() });
+
+  it("adds a pending member without consuming the link", async () => {
+    const { calls } = setup((c) => (c.table === "invites" && c.op === "select" ? { data: GROUP() } : undefined));
+    expect(await requestJoin(form("민지"))).toEqual({ success: true, data: undefined });
+    expect(calls.some((c) => c.table === "invites" && c.op === "update")).toBe(false);
+    const insert = calls.find((c) => c.table === "members" && c.op === "insert")!;
+    expect(insert.payload).toMatchObject({ invite_id: "inv-1", status: "pending", nickname: "민지" });
+    expect(signalSession).toHaveBeenCalledWith("ses-1", { type: "member.pending" });
+  });
+
+  it("refuses a device the host already rejected on this link", async () => {
+    const { calls } = setup((c) => {
+      if (c.table === "invites" && c.op === "select") return { data: GROUP() };
+      if (c.table === "invite_rejections") return { data: { invite_id: "inv-1" } };
+      return undefined;
+    });
+    expect(await requestJoin(form("민지"))).toMatchObject({ success: false, code: "UNAUTHORIZED" });
+    expect(calls.some((c) => c.table === "members" && c.op === "insert")).toBe(false);
+  });
+
+  it("refuses revoked or expired group links", async () => {
+    setup((c) =>
+      c.table === "invites" && c.op === "select"
+        ? { data: { ...GROUP(), expires_at: new Date(Date.now() - 1000).toISOString() } }
+        : undefined,
+    );
+    expect(await requestJoin(form("민지"))).toMatchObject({ success: false, code: "NOT_FOUND" });
+  });
+
+  it("caps how many people can wait on one group link", async () => {
+    setup((c) => {
+      if (c.table === "invites" && c.op === "select") return { data: GROUP() };
+      if (c.table === "members" && c.filters["eq:invite_id"]) return { count: 50 };
+      return undefined;
+    });
+    expect(await requestJoin(form("민지"))).toMatchObject({ success: false, code: "RATE_LIMITED" });
+  });
+});
+
+describe("createInvite", () => {
+  const SID = "6f1c2a5e-8b9d-4c3e-a1f2-0b1c2d3e4f50";
+  const createForm = (kind?: string) => {
+    const fd = new FormData();
+    fd.set("sessionId", SID);
+    fd.set("memo", "");
+    if (kind !== undefined) fd.set("kind", kind);
+    return fd;
+  };
+
+  beforeEach(() => (requireHost as jest.Mock).mockResolvedValue({}));
+
+  it.each([
+    [undefined, "single"],
+    ["single", "single"],
+    ["group", "group"],
+  ])("stores kind=%s as %s", async (kind, stored) => {
+    const { calls } = setup((c) =>
+      c.table === "invites" && c.op === "insert" ? { data: { expires_at: "2026-11-10T00:00:00Z" } } : undefined,
+    );
+    const result = await createInvite(createForm(kind));
+    expect(result).toMatchObject({ success: true, data: { kind: stored } });
+    expect(calls.find((c) => c.op === "insert")!.payload).toMatchObject({ kind: stored });
+  });
+
+  it("rejects unknown kinds", async () => {
+    expect(await createInvite(createForm("public"))).toMatchObject({ success: false, code: "VALIDATION_ERROR" });
   });
 });

@@ -10,9 +10,16 @@ export const inviteMemoSchema = z
   .optional()
   .transform((v) => v ?? null);
 
+/** I-11: single = 1명·1회용, group = 만료 전까지 여러 명이 쓸 수 있는 링크 */
+export const inviteKindSchema = z
+  .enum(["single", "group"])
+  .nullish()
+  .transform((v) => v ?? "single");
+
 export const createInviteSchema = z.object({
   sessionId: z.uuid(),
   memo: inviteMemoSchema,
+  kind: inviteKindSchema,
 });
 
 export const inviteTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{32}$/, "올바르지 않은 링크예요.");

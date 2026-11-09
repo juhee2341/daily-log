@@ -6,6 +6,7 @@ import { NotificationSettings } from "@/components/settings/NotificationSettings
 import { TransferIssuer } from "@/components/transfer/TransferIssuer";
 import { getCurrentUserId } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { FormSkeleton } from "@/components/skeletons/PageSkeletons";
 
 export const metadata: Metadata = { title: "설정" };
 
@@ -23,7 +24,7 @@ export default function SettingsPage() {
         <h2 id="notify-heading" className="text-sm font-semibold text-muted-foreground">
           알림
         </h2>
-        <Suspense fallback={<div className="h-24 animate-pulse rounded-xl bg-muted motion-reduce:animate-none" aria-hidden />}>
+        <Suspense fallback={<FormSkeleton rows={2} />}>
           <NotificationSection />
         </Suspense>
       </section>

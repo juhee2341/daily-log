@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
@@ -62,7 +63,8 @@ export async function requireMember(sessionId: string): Promise<{ userId: string
     .maybeSingle();
 
   if (!member) throw new AuthError("NOT_FOUND", "세션을 찾을 수 없거나 참여 중이 아니에요.");
-  if (member.role === "host") await touchHostLastSeen(sessionId);
+  // 응답을 막지 않도록 렌더·액션이 끝난 뒤에 기록한다
+  if (member.role === "host") after(() => touchHostLastSeen(sessionId));
   return { userId, member };
 }
 

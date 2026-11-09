@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 
 type State = Awaited<ReturnType<typeof requestJoin>> | null;
 
-export function JoinForm({ token }: { token: string }) {
+export function JoinForm({ token, group = false }: { token: string; group?: boolean }) {
   const [state, formAction, pending] = useActionState<State, FormData>(
     async (_prev, formData) => requestJoin(formData),
     null,
@@ -26,7 +26,6 @@ export function JoinForm({ token }: { token: string }) {
           id="nickname"
           name="nickname"
           placeholder="이 세션에서 쓸 이름"
-          maxLength={12}
           autoComplete="nickname"
           required
           aria-invalid={!!nicknameError}
@@ -42,7 +41,7 @@ export function JoinForm({ token }: { token: string }) {
 
       <p id="join-notice" className="rounded-lg bg-muted p-3 text-xs leading-relaxed text-muted-foreground">
         방장이 승인하면 들어갈 수 있어요. 참여하면 내 포스트가 세션 브이로그에 포함되어 다른 멤버가 영상으로 저장할 수 있어요.
-        이 링크는 한 번만 쓸 수 있어요.
+        {group ? " 여러 명이 함께 쓰는 링크예요." : " 이 링크는 한 번만 쓸 수 있어요."}
       </p>
 
       {formError && (

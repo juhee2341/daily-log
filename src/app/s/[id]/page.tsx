@@ -11,9 +11,10 @@ import { getMission } from "@/lib/data/day-map";
 import { getSessionOverview } from "@/lib/data/sessions";
 import { HOST_INACTIVE_DAYS } from "@/lib/maintenance";
 import { getTimeline, type Timeline, type TimelinePost } from "@/lib/data/timeline";
-import { formatKst } from "@/lib/slot";
+import { formatKst, getRetainedDates } from "@/lib/slot";
 import { dayParamSchema } from "@/lib/validators/post.schema";
 import { sessionIdSchema } from "@/lib/validators/session.schema";
+import { TimelineSkeleton } from "@/components/skeletons/PageSkeletons";
 
 export default function SessionPage({ params, searchParams }: PageProps<"/s/[id]">) {
   return (
@@ -23,7 +24,7 @@ export default function SessionPage({ params, searchParams }: PageProps<"/s/[id]
           ← 홈
         </Link>
       </nav>
-      <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-muted motion-reduce:animate-none" aria-hidden />}>
+      <Suspense fallback={<TimelineSkeleton />}>
         <SessionContent params={params} searchParams={searchParams} />
       </Suspense>
     </main>
@@ -49,9 +50,15 @@ async function SessionContent({
     throw error;
   }
 
-  const [overview, timeline] = await Promise.all([getSessionOverview(id, memberId), getTimeline(id, memberId, day)]);
+  // 타임라인과 미션이 같은 날짜를 보도록 기준 시각을 하나로 맞춘다
+  const now = new Date();
+  const dates = getRetainedDates(now);
+  const [overview, timeline, mission] = await Promise.all([
+    getSessionOverview(id, memberId, now),
+    getTimeline(id, memberId, day, now),
+    getMission(id, day === "today" ? dates.today : dates.yesterday),
+  ]);
   if (!overview) notFound();
-  const mission = await getMission(id, timeline.logDate);
 
   return (
     <>

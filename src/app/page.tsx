@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { HomeNotice } from "@/components/home/HomeNotice";
-import { MySessionList, MySessionListSkeleton } from "@/components/home/MySessionList";
+import { MySessionList } from "@/components/home/MySessionList";
+import { SessionListSkeleton } from "@/components/skeletons/PageSkeletons";
 import { Button } from "@/components/ui/button";
 
 export default function Home({ searchParams }: PageProps<"/">) {
@@ -29,7 +30,7 @@ export default function Home({ searchParams }: PageProps<"/">) {
         <h2 id="my-sessions-heading" className="text-sm font-semibold text-muted-foreground">
           내 세션
         </h2>
-        <Suspense fallback={<MySessionListSkeleton />}>
+        <Suspense fallback={<SessionListSkeleton />}>
           <MySessionList />
         </Suspense>
       </section>

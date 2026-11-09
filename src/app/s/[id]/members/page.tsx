@@ -12,13 +12,14 @@ import { AuthError, requireMember } from "@/lib/auth";
 import { getMembersPageData } from "@/lib/data/members";
 import { formatKst } from "@/lib/slot";
 import { sessionIdSchema } from "@/lib/validators/session.schema";
+import { MembersSkeleton } from "@/components/skeletons/PageSkeletons";
 
 export const metadata: Metadata = { title: "멤버" };
 
 export default function MembersPage({ params }: PageProps<"/s/[id]/members">) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-6">
-      <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-muted motion-reduce:animate-none" aria-hidden />}>
+      <Suspense fallback={<MembersSkeleton />}>
         <MembersContent params={params} />
       </Suspense>
     </main>
@@ -57,10 +58,15 @@ async function MembersContent({ params }: { params: PageProps<"/s/[id]/members">
           </h2>
           <InviteCreator sessionId={id} sessionName={data.sessionName} />
           {data.invites.length > 0 && (
-            <ul className="flex flex-col gap-2" aria-label="아직 안 쓴 링크">
+            <ul className="flex flex-col gap-2" aria-label="사용 가능한 링크">
               {data.invites.map((invite) => (
                 <li key={invite.id} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2 text-sm">
                   <span className="min-w-0 truncate">
+                    {invite.kind === "group" && (
+                      <Badge variant="secondary" className="mr-1.5">
+                        그룹 · {invite.joinCount}명
+                      </Badge>
+                    )}
                     {invite.memo ?? "메모 없음"}
                     <span className="text-xs text-muted-foreground">
                       {" "}· {formatKst(invite.createdAt, "HH:mm")} 생성 · {formatKst(invite.expiresAt, "M/d HH:mm")}까지

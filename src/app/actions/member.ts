@@ -59,19 +59,33 @@ export async function rejectMember(sessionId: string, memberId: string): Promise
     .eq("id", parsed.data.memberId)
     .eq("session_id", parsed.data.sessionId)
     .eq("status", "pending")
-    .select("invite_id");
+    .select("invite_id, user_id");
   if (error) {
     console.error({ action: "rejectMember", ...parsed.data, error });
     return fail("INTERNAL", "거절하지 못했어요.");
   }
   if (!removed.length) return fail("NOT_FOUND", "이미 처리된 요청이에요.");
 
-  const inviteId = removed[0].invite_id;
-  if (inviteId) await admin.from("invites").update({ rejected_at: new Date().toISOString() }).eq("id", inviteId);
+  const { invite_id: inviteId, user_id: userId } = removed[0];
+  if (inviteId) await recordRejection(inviteId, userId);
 
   await signalJoin(parsed.data.memberId, { type: "member.rejected" });
   refresh();
   return ok(undefined);
+}
+
+/**
+ * 같은 기기가 링크를 다시 열면 "거절됨"을 보여주기 위한 기록.
+ * 개인 링크는 링크 자체에, 그룹 링크(I-11)는 링크가 계속 쓰이므로 기기별로 남긴다.
+ */
+async function recordRejection(inviteId: string, userId: string) {
+  const admin = createAdminClient();
+  const { data: invite } = await admin.from("invites").select("kind").eq("id", inviteId).maybeSingle();
+  const { error } =
+    invite?.kind === "group"
+      ? await admin.from("invite_rejections").upsert({ invite_id: inviteId, user_id: userId }, { ignoreDuplicates: true })
+      : await admin.from("invites").update({ rejected_at: new Date().toISOString() }).eq("id", inviteId);
+  if (error) console.error({ action: "rejectMember.record", inviteId, error });
 }
 
 /** I-7, I-8: 방장이 멤버를 내보낸다. 그 사람의 포스트·댓글·미디어가 모두 삭제된다. */

@@ -12,7 +12,7 @@ export function PendingItem({
   createdLabel,
 }: {
   sessionId: string;
-  member: { id: string; nickname: string; memo: string | null };
+  member: { id: string; nickname: string; memo: string | null; inviteKind: "single" | "group" | null };
   createdLabel: string | null;
 }) {
   const [pending, startTransition] = useTransition();
@@ -29,7 +29,13 @@ export function PendingItem({
       <div className="min-w-0">
         <p className="truncate font-medium">{member.nickname}</p>
         <p className="truncate text-xs text-muted-foreground">
-          {[member.memo, createdLabel && `${createdLabel}에 만든 링크`].filter(Boolean).join(" · ") || "메모 없음"}
+          {[
+            member.inviteKind === "group" && "그룹 링크",
+            member.memo,
+            createdLabel && `${createdLabel}에 만든 링크`,
+          ]
+            .filter(Boolean)
+            .join(" · ") || "메모 없음"}
         </p>
         {error && (
           <p role="alert" className="text-xs text-destructive">

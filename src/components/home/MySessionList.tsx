@@ -52,13 +52,3 @@ export async function MySessionList() {
     </ul>
   );
 }
-
-export function MySessionListSkeleton() {
-  return (
-    <div className="flex flex-col gap-3" aria-hidden>
-      {[0, 1].map((i) => (
-        <div key={i} className="h-[76px] animate-pulse rounded-xl bg-muted motion-reduce:animate-none" />
-      ))}
-    </div>
-  );
-}

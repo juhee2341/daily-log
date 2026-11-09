@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { getCurrentUserId } from "@/lib/auth";
 import { getJoinState } from "@/lib/data/invites";
 import { isWellFormedToken } from "@/lib/invite-token";
+import { JoinSkeleton } from "@/components/skeletons/PageSkeletons";
 
 export const metadata: Metadata = { title: "초대", robots: { index: false } };
 
 export default function JoinPage({ params }: PageProps<"/join/[token]">) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-4 py-10">
-      <Suspense fallback={<div className="h-48 animate-pulse rounded-xl bg-muted motion-reduce:animate-none" aria-hidden />}>
+      <Suspense fallback={<JoinSkeleton />}>
         <JoinContent params={params} />
       </Suspense>
     </main>
@@ -24,7 +25,7 @@ export default function JoinPage({ params }: PageProps<"/join/[token]">) {
 const DEAD_LINK = {
   invalid: { title: "유효하지 않은 링크예요", body: "링크가 잘못됐거나, 세션이 이미 사라졌어요." },
   revoked: { title: "취소된 링크예요", body: "방장에게 새 링크를 받아주세요." },
-  expired: { title: "만료된 링크예요", body: "초대 링크는 24시간 동안만 쓸 수 있어요. 방장에게 새 링크를 받아주세요." },
+  expired: { title: "만료된 링크예요", body: "초대 링크는 만든 지 24시간 동안만 쓸 수 있어요. 방장에게 새 링크를 받아주세요." },
   used: { title: "이미 사용된 링크예요", body: "초대 링크는 한 번만 쓸 수 있어요. 방장에게 새 링크를 받아주세요." },
 } as const;
 
@@ -39,10 +40,10 @@ async function JoinContent({ params }: { params: PageProps<"/join/[token]">["par
     return (
       <>
         <header className="flex flex-col gap-1">
-          <p className="text-sm text-muted-foreground">초대받은 세션</p>
+          <p className="text-sm text-muted-foreground">{state.group ? "그룹 초대" : "초대받은 세션"}</p>
           <h1 className="text-2xl font-bold">{state.sessionName}</h1>
         </header>
-        <JoinForm token={token} />
+        <JoinForm token={token} group={state.group} />
       </>
     );
   }

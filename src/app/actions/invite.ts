@@ -8,15 +8,26 @@ import { signalSession } from "@/lib/realtime";
 import { getSiteUrl } from "@/lib/site-url";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createInviteSchema, requestJoinSchema, sessionInviteSchema } from "@/lib/validators/member.schema";
+import type { InviteKind } from "@/types/database";
 
 const MAX_OPEN_INVITES = 30;
+/** 그룹 링크 하나로 쌓일 수 있는 승인 대기 인원 (링크가 퍼졌을 때 대기 목록이 넘치지 않게) */
+const MAX_PENDING_PER_GROUP_INVITE = 50;
 const UNIQUE_VIOLATION = "23505";
 
-/** I-1: 일회용 초대 링크 생성. 원본 링크는 이 응답에서만 받을 수 있다. */
-export async function createInvite(formData: FormData): Promise<ActionResult<{ url: string; expiresAt: string }>> {
-  const parsed = createInviteSchema.safeParse({ sessionId: formData.get("sessionId"), memo: formData.get("memo") });
+const NICKNAME_TAKEN = { nickname: ["이 세션에서 이미 쓰는 닉네임이에요."] };
+
+/** I-1, I-11: 초대 링크 생성 (개인 = 1회용, 그룹 = 여러 명). 원본 링크는 이 응답에서만 받을 수 있다. */
+export async function createInvite(
+  formData: FormData,
+): Promise<ActionResult<{ url: string; expiresAt: string; kind: InviteKind }>> {
+  const parsed = createInviteSchema.safeParse({
+    sessionId: formData.get("sessionId"),
+    memo: formData.get("memo"),
+    kind: formData.get("kind"),
+  });
   if (!parsed.success) return fail("VALIDATION_ERROR", "입력값을 확인해주세요.", parsed.error.flatten().fieldErrors);
-  const { sessionId, memo } = parsed.data;
+  const { sessionId, memo, kind } = parsed.data;
 
   try {
     await requireHost(sessionId);
@@ -38,7 +49,7 @@ export async function createInvite(formData: FormData): Promise<ActionResult<{ u
   const token = generateInviteToken();
   const { data: invite, error } = await admin
     .from("invites")
-    .insert({ session_id: sessionId, token_hash: hashToken(token), memo })
+    .insert({ session_id: sessionId, token_hash: hashToken(token), memo, kind })
     .select("expires_at")
     .single();
   if (error || !invite) {
@@ -47,7 +58,7 @@ export async function createInvite(formData: FormData): Promise<ActionResult<{ u
   }
 
   refresh();
-  return ok({ url: `${await getSiteUrl()}/join/${token}`, expiresAt: invite.expires_at });
+  return ok({ url: `${await getSiteUrl()}/join/${token}`, expiresAt: invite.expires_at, kind });
 }
 
 /** I-3: 쓰지 않은 링크 취소. */
@@ -90,8 +101,11 @@ export async function requestJoin(formData: FormData): Promise<ActionResult> {
   }
 
   const admin = createAdminClient();
-  const tokenHash = hashToken(token);
-  const { data: invite } = await admin.from("invites").select("id, session_id").eq("token_hash", tokenHash).maybeSingle();
+  const { data: invite } = await admin
+    .from("invites")
+    .select("id, session_id, kind, status, expires_at")
+    .eq("token_hash", hashToken(token))
+    .maybeSingle();
   if (!invite) return fail("NOT_FOUND", "유효하지 않은 링크예요.");
 
   const [mine, sameNickname] = await Promise.all([
@@ -103,11 +117,35 @@ export async function requestJoin(formData: FormData): Promise<ActionResult> {
     refresh();
     return ok(undefined);
   }
-  if (sameNickname.data) {
-    return fail("VALIDATION_ERROR", "입력값을 확인해주세요.", { nickname: ["이 세션에서 이미 쓰는 닉네임이에요."] });
-  }
+  if (sameNickname.data) return fail("VALIDATION_ERROR", "입력값을 확인해주세요.", NICKNAME_TAKEN);
 
-  // 조건부 업데이트로 링크를 원자적으로 차지한다 (동시에 두 명이 눌러도 한 명만 성공)
+  const joined =
+    invite.kind === "group"
+      ? await joinWithGroupInvite(admin, invite, userId, nickname)
+      : await joinWithSingleInvite(admin, invite, userId, nickname);
+  if (joined) return joined;
+
+  await signalSession(invite.session_id, { type: "member.pending" });
+  refresh();
+  return ok(undefined);
+}
+
+type Admin = ReturnType<typeof createAdminClient>;
+type InviteRow = { id: string; session_id: string; status: string; expires_at: string };
+
+function pendingMember(invite: InviteRow, userId: string, nickname: string) {
+  return {
+    session_id: invite.session_id,
+    user_id: userId,
+    invite_id: invite.id,
+    nickname,
+    role: "member" as const,
+    status: "pending" as const,
+  };
+}
+
+/** I-2: 개인 링크 — 조건부 업데이트로 원자적으로 차지한다 (동시에 두 명이 눌러도 한 명만 성공). 실패 시 결과를, 성공 시 null. */
+async function joinWithSingleInvite(admin: Admin, invite: InviteRow, userId: string, nickname: string) {
   const now = new Date().toISOString();
   const { data: claimed, error: claimError } = await admin
     .from("invites")
@@ -122,24 +160,40 @@ export async function requestJoin(formData: FormData): Promise<ActionResult> {
   }
   if (!claimed.length) return fail("NOT_FOUND", "이미 사용됐거나 만료된 링크예요.");
 
-  const { error: memberError } = await admin.from("members").insert({
-    session_id: invite.session_id,
-    user_id: userId,
-    invite_id: invite.id,
-    nickname,
-    role: "member",
-    status: "pending",
-  });
+  const { error: memberError } = await admin.from("members").insert(pendingMember(invite, userId, nickname));
   if (memberError) {
     await admin.from("invites").update({ status: "open", used_at: null, used_by: null }).eq("id", invite.id);
-    if (memberError.code === UNIQUE_VIOLATION) {
-      return fail("VALIDATION_ERROR", "입력값을 확인해주세요.", { nickname: ["이 세션에서 이미 쓰는 닉네임이에요."] });
-    }
+    if (memberError.code === UNIQUE_VIOLATION) return fail("VALIDATION_ERROR", "입력값을 확인해주세요.", NICKNAME_TAKEN);
     console.error({ action: "requestJoin.member", userId, error: memberError });
     return fail("INTERNAL", "참여 요청을 보내지 못했어요.");
   }
+  return null;
+}
 
-  await signalSession(invite.session_id, { type: "member.pending" });
-  refresh();
-  return ok(undefined);
+/** I-11: 그룹 링크 — 링크를 소모하지 않는다. 이 링크로 거절된 기기는 다시 요청할 수 없다. */
+async function joinWithGroupInvite(admin: Admin, invite: InviteRow, userId: string, nickname: string) {
+  if (invite.status !== "open" || new Date(invite.expires_at) <= new Date()) {
+    return fail("NOT_FOUND", "취소됐거나 만료된 링크예요.");
+  }
+
+  const [rejection, waiting] = await Promise.all([
+    admin.from("invite_rejections").select("invite_id").eq("invite_id", invite.id).eq("user_id", userId).maybeSingle(),
+    admin
+      .from("members")
+      .select("id", { count: "exact", head: true })
+      .eq("invite_id", invite.id)
+      .eq("status", "pending"),
+  ]);
+  if (rejection.data) return fail("UNAUTHORIZED", "방장이 이 기기의 참여 요청을 거절했어요.");
+  if ((waiting.count ?? 0) >= MAX_PENDING_PER_GROUP_INVITE) {
+    return fail("RATE_LIMITED", "승인을 기다리는 사람이 너무 많아요. 잠시 후 다시 시도해주세요.");
+  }
+
+  const { error } = await admin.from("members").insert(pendingMember(invite, userId, nickname));
+  if (error) {
+    if (error.code === UNIQUE_VIOLATION) return fail("VALIDATION_ERROR", "입력값을 확인해주세요.", NICKNAME_TAKEN);
+    console.error({ action: "requestJoin.groupMember", userId, error });
+    return fail("INTERNAL", "참여 요청을 보내지 못했어요.");
+  }
+  return null;
 }

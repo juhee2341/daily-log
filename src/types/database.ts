@@ -11,6 +11,7 @@ type Table<Row, Insert, Update = Partial<Insert>> = {
 };
 
 export type InviteStatus = "open" | "used" | "revoked";
+export type InviteKind = "single" | "group";
 export type MemberRole = "host" | "member";
 export type MemberStatus = "pending" | "active";
 export type MediaType = "photo" | "video";
@@ -34,6 +35,7 @@ export type Database = {
           used_at: string | null;
           used_by: string | null;
           rejected_at: string | null;
+          kind: InviteKind;
         },
         {
           id?: string;
@@ -46,7 +48,12 @@ export type Database = {
           used_at?: string | null;
           used_by?: string | null;
           rejected_at?: string | null;
+          kind?: InviteKind;
         }
+      >;
+      invite_rejections: Table<
+        { invite_id: string; user_id: string; created_at: string },
+        { invite_id: string; user_id: string; created_at?: string }
       >;
       members: Table<
         {
